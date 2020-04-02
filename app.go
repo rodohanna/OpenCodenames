@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"./game"
+	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
-	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
@@ -18,8 +18,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "/ %s!", r.Method)
 }
 
-// from the official documentation.
-func firestoreExample() {
+func initFirestore() (*firestore.Client, error) {
 	ctx := context.Background()
 	sa := option.WithCredentialsFile("./chunkynut-key.json")
 	app, err := firebase.NewApp(ctx, nil, sa)
@@ -31,41 +30,18 @@ func firestoreExample() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	defer client.Close()
-	_, _, err = client.Collection("users").Add(ctx, map[string]interface{}{
-		"first": "Ada",
-		"last":  "Lovelace",
-		"born":  1815,
-	})
-	if err != nil {
-		log.Fatalf("Failed adding alovelace: %v", err)
-	}
-	_, _, err = client.Collection("users").Add(ctx, map[string]interface{}{
-		"first":  "Alan",
-		"middle": "Mathison",
-		"last":   "Turing",
-		"born":   1912,
-	})
-	if err != nil {
-		log.Fatalf("Failed adding aturing: %v", err)
-	}
-	iter := client.Collection("users").Documents(ctx)
-	for {
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			log.Fatalf("Failed to iterate: %v", err)
-		}
-		fmt.Println(doc.Data())
-	}
+	return client, nil
 }
 
 func main() {
 	rand.Seed(time.Now().Unix())
+	client, err := initFirestore()
+	if err != nil {
+		log.Fatalf("Failed initializing Firestore: %v", err)
+	}
+	defer client.Close()
 	http.HandleFunc("/", index)
-	http.HandleFunc("/game/create", game.CreateGame)
-	http.HandleFunc("/game/join", game.JoinGame)
+	http.HandleFunc("/game/create", game.CreateGame(client))
+	http.HandleFunc("/game/join", game.JoinGame(client))
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
