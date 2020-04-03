@@ -41,7 +41,7 @@ func main() {
 	}
 	defer client.Close()
 	http.HandleFunc("/", index)
-	http.HandleFunc("/game/create", game.CreateGame(client))
-	http.HandleFunc("/game/join", game.JoinGame(client))
+	http.HandleFunc("/game/create", game.CreateGameHandler(client))
+	http.HandleFunc("/game/join", game.JoinGameHandler(client))
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

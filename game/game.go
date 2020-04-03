@@ -5,37 +5,54 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 
-	"../crud"
+	"../db"
 	"../utils"
 	"cloud.google.com/go/firestore"
 )
 
-// CreateGame TODO: document
-func CreateGame(client *firestore.Client) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
+// CreateGameHandler TODO: document
+func CreateGameHandler(client *firestore.Client) utils.Handler {
+	return utils.PostRequest(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.Background()
 		id, err := utils.MakeEasyID(4)
 		if err != nil {
 			log.Panic("Could not make an ID")
 		}
-		game := crud.Game{ID: id, Status: "pending", Players: make([]string, 0)}
-		err = crud.CreateGame(ctx, client, &game)
+		game := db.Game{ID: id, Status: "pending", Players: make([]string, 0)}
+		err = db.CreateGame(ctx, client, &game)
 		if err != nil {
 			fmt.Fprintf(w, "failed to create game %s %s!", r.Method, id)
 			return
 		}
 		fmt.Fprintf(w, "successfully created game %s %s!", r.Method, id)
-	}
+	})
 }
 
-// JoinGame TODO: document
-func JoinGame(client *firestore.Client) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		id, err := utils.MakeEasyID(4)
+// JoinGameHandler TODO: document
+func JoinGameHandler(client *firestore.Client) utils.Handler {
+	return utils.PostRequest(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.Background()
+		paramMap, err := url.ParseQuery(r.URL.RawQuery)
 		if err != nil {
-			log.Panic("Could not make an ID")
+			log.Panic("Could not parse URL")
 		}
-		fmt.Fprintf(w, "/game/join %s %s!", r.Method, id)
-	}
+		gameID, gameIDExists := paramMap["gameID"]
+		if !gameIDExists || len(gameID) != 1 {
+			fmt.Fprintf(w, "Invalid gameID")
+			return
+		}
+		playerName, playerNameExists := paramMap["playerName"]
+		if !playerNameExists || len(playerName) != 1 {
+			fmt.Fprintf(w, "Invalid playerName")
+			return
+		}
+		err = db.AddPlayerToGame(ctx, client, gameID[0], playerName[0])
+		if err != nil {
+			fmt.Fprintf(w, "Failed to add player %s to %s!", playerName[0], gameID[0])
+			return
+		}
+		fmt.Fprintf(w, "Successfully added player \"%s\" to %s!", playerName[0], gameID[0])
+	})
 }
