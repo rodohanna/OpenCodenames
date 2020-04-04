@@ -43,5 +43,6 @@ func main() {
 	http.HandleFunc("/", index)
 	http.HandleFunc("/game/create", game.CreateGameHandler(client))
 	http.HandleFunc("/game/join", game.JoinGameHandler(client))
+	http.HandleFunc("/ws", game.EchoHandler())
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

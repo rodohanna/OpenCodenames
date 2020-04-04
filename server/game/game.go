@@ -10,6 +10,7 @@ import (
 	"../db"
 	"../utils"
 	"cloud.google.com/go/firestore"
+	"github.com/gorilla/websocket"
 )
 
 // CreateGameHandler TODO: document
@@ -54,5 +55,24 @@ func JoinGameHandler(client *firestore.Client) utils.Handler {
 			return
 		}
 		fmt.Fprintf(w, "Successfully added player \"%s\" to %s!", playerName[0], gameID[0])
+	})
+}
+
+// EchoHandler TODO: document
+func EchoHandler() utils.Handler {
+	return utils.WebSocketRequest(func(c *websocket.Conn) {
+		for {
+			mt, message, err := c.ReadMessage()
+			if err != nil {
+				log.Println("read:", err)
+				break
+			}
+			log.Printf("recv: %s", message)
+			err = c.WriteMessage(mt, message)
+			if err != nil {
+				log.Println("write:", err)
+				break
+			}
+		}
 	})
 }

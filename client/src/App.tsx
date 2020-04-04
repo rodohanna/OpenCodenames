@@ -1,21 +1,39 @@
 import React from 'react';
-import logo from './logo.svg';
 import './App.css';
+import useWebSocket from './hooks/useWebSocket';
 
 function App() {
-    return (
-        <div className="App">
-            <header className="App-header">
-                <img src={logo} className="App-logo" alt="logo" />
-                <p>
-                    Edit <code>src/App.tsx</code> and save to reload.
-                </p>
-                <a className="App-link" href="https://reactjs.org" target="_blank" rel="noopener noreferrer">
-                    Learn React
-                </a>
-            </header>
-        </div>
-    );
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const [messages, setMessages] = React.useState<Array<string>>([]);
+  const [connected, incomingMessage, sendMessage] = useWebSocket();
+  React.useEffect(() => {
+    if (typeof incomingMessage.body === 'string') {
+      setMessages([...messages, incomingMessage.body]);
+    }
+    // eslint-disable-next-line
+  }, [incomingMessage]);
+  return (
+    <div className="App">
+      <label>Send:</label>
+      <input
+        ref={inputRef}
+        type="text"
+        id="send"
+        name="send"
+        onKeyDown={(e) => {
+          if (e.keyCode === 13) {
+            connected && sendMessage({ body: inputRef.current?.value || 'empty' });
+          }
+        }}
+      />
+      <br />
+      <ul>
+        {messages.map((message, index) => (
+          <li key={`${message}${index}`}>{message}</li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 export default App;

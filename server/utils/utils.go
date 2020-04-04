@@ -3,15 +3,21 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"strings"
+
+	"github.com/gorilla/websocket"
 )
 
 const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 // Handler yep
 type Handler func(w http.ResponseWriter, r *http.Request)
+
+// WSHandler yep
+type WSHandler func(c *websocket.Conn)
 
 // MakeEasyID creates an ID composed of random alphabetic characters
 func MakeEasyID(length int) (string, error) {
@@ -46,6 +52,25 @@ func GetRequest(handler Handler) Handler {
 			return
 		}
 		handler(w, r)
+	}
+}
+
+// WebSocketRequest TODO: document
+func WebSocketRequest(handle WSHandler) Handler {
+	upgrader := websocket.Upgrader{}
+	upgrader.CheckOrigin = func(r *http.Request) bool {
+		// TODO: actually check the origin.
+		return true
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Println("WS request")
+		c, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Print("upgrade:", err)
+			return
+		}
+		defer c.Close()
+		handle(c)
 	}
 }
 
