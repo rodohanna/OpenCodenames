@@ -5,7 +5,7 @@ import useWebSocket from './hooks/useWebSocket';
 function App() {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const [messages, setMessages] = React.useState<Array<string>>([]);
-  const [connected, incomingMessage, sendMessage] = useWebSocket();
+  const [connected, incomingMessage, sendMessage] = useWebSocket('ws://localhost:8080/ws?gameID=FAKE&playerID=FAKE2');
   React.useEffect(() => {
     if (typeof incomingMessage.body === 'string') {
       setMessages([...messages, incomingMessage.body]);

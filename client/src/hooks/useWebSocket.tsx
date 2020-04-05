@@ -1,6 +1,7 @@
 import React from 'react';
 
-export default function (): [boolean, Message, React.Dispatch<React.SetStateAction<Message>>] {
+export default function (webSocketUrl: string): [boolean, Message, React.Dispatch<React.SetStateAction<Message>>] {
+  const [socketUrl] = React.useState(webSocketUrl);
   const [socket, setSocket] = React.useState<WebSocket | null>(null);
   const [connected, setConnected] = React.useState(false);
   const [latestSentMessage, sendMessage] = React.useState<Message>({ body: null });
@@ -8,7 +9,7 @@ export default function (): [boolean, Message, React.Dispatch<React.SetStateActi
 
   React.useEffect(() => {
     if (socket === null) {
-      setSocket(new WebSocket('ws://localhost:8080/ws'));
+      setSocket(new WebSocket(socketUrl));
     }
     socket?.addEventListener('open', (e) => {
       console.log('Opened  connection ', e);
@@ -25,7 +26,7 @@ export default function (): [boolean, Message, React.Dispatch<React.SetStateActi
       console.log('Server closed connection ', e);
       setConnected(false);
     });
-  }, [socket]);
+  }, [socketUrl, socket]);
   React.useEffect(() => {
     if (typeof latestSentMessage.body === 'string') {
       socket?.send(latestSentMessage.body);

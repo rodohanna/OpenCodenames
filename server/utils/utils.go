@@ -17,7 +17,7 @@ const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 type Handler func(w http.ResponseWriter, r *http.Request)
 
 // WSHandler yep
-type WSHandler func(c *websocket.Conn)
+type WSHandler func(r *http.Request, c *websocket.Conn)
 
 // MakeEasyID creates an ID composed of random alphabetic characters
 func MakeEasyID(length int) (string, error) {
@@ -70,7 +70,7 @@ func WebSocketRequest(handle WSHandler) Handler {
 			return
 		}
 		defer c.Close()
-		handle(c)
+		handle(r, c)
 	}
 }
 

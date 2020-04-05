@@ -39,28 +39,50 @@ func JoinGameHandler(client *firestore.Client) utils.Handler {
 		if err != nil {
 			log.Panic("Could not parse URL")
 		}
-		gameID, gameIDExists := paramMap["gameID"]
-		if !gameIDExists || len(gameID) != 1 {
+		gameIDArray, gameIDExists := paramMap["gameID"]
+		if !gameIDExists || len(gameIDArray) != 1 {
 			fmt.Fprintf(w, "Invalid gameID")
 			return
 		}
-		playerName, playerNameExists := paramMap["playerName"]
-		if !playerNameExists || len(playerName) != 1 {
+		playerNameArray, playerNameExists := paramMap["playerName"]
+		if !playerNameExists || len(playerNameArray) != 1 {
 			fmt.Fprintf(w, "Invalid playerName")
 			return
 		}
-		err = db.AddPlayerToGame(ctx, client, gameID[0], playerName[0])
+		gameID := gameIDArray[0]
+		playerName := playerNameArray[0]
+		err = db.AddPlayerToGame(ctx, client, gameID, playerName)
 		if err != nil {
-			fmt.Fprintf(w, "Failed to add player %s to %s!", playerName[0], gameID[0])
+			fmt.Fprintf(w, "Failed to add player %s to %s!", playerName, gameID)
 			return
 		}
-		fmt.Fprintf(w, "Successfully added player \"%s\" to %s!", playerName[0], gameID[0])
+		fmt.Fprintf(w, "Successfully added player \"%s\" to %s!", playerName, gameID)
 	})
 }
 
 // EchoHandler TODO: document
 func EchoHandler() utils.Handler {
-	return utils.WebSocketRequest(func(c *websocket.Conn) {
+	return utils.WebSocketRequest(func(r *http.Request, c *websocket.Conn) {
+		paramMap, err := url.ParseQuery(r.URL.RawQuery)
+		if err != nil {
+			log.Println("Could not parse URL")
+			return
+		}
+		gameIDArray, gameIDExists := paramMap["gameID"]
+		if !gameIDExists || len(gameIDArray) != 1 {
+			c.WriteJSON(map[string]string{"error": "missing gameID field"})
+			c.Close()
+			return
+		}
+		playerIDArray, playerIDExists := paramMap["playerID"]
+		if !playerIDExists || len(playerIDArray) != 1 {
+			c.WriteJSON(map[string]string{"error": "missing playerID field"})
+			c.Close()
+			return
+		}
+		gameID := gameIDArray[0]
+		playerID := playerIDArray[0]
+		log.Printf("Success: gameID %s playerID %s", gameID, playerID)
 		for {
 			mt, message, err := c.ReadMessage()
 			if err != nil {
