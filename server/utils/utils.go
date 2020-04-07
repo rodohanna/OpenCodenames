@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gorilla/websocket"
@@ -82,4 +83,13 @@ func Contains(slice []string, target string) (int, bool) {
 		}
 	}
 	return -1, false
+}
+
+// GetQueryValue todo: document
+func GetQueryValue(params *url.Values, paramName string) (string, error) {
+	paramValueArray, paramValueExists := (*params)[paramName]
+	if !paramValueExists || len(paramValueArray) != 1 {
+		return "", errors.New("Could not find param value")
+	}
+	return paramValueArray[0], nil
 }

@@ -8,6 +8,7 @@ import (
 	"net/url"
 
 	"../db"
+	h "../hub"
 	"../utils"
 	"cloud.google.com/go/firestore"
 	"github.com/gorilla/websocket"
@@ -21,7 +22,7 @@ func CreateGameHandler(client *firestore.Client) utils.Handler {
 		if err != nil {
 			log.Panic("Could not make an ID")
 		}
-		game := db.Game{ID: id, Status: "pending", Players: make([]string, 0)}
+		game := db.Game{ID: id, Status: "pending", Players: make(map[string]string)}
 		err = db.CreateGame(ctx, client, &game)
 		if err != nil {
 			fmt.Fprintf(w, "failed to create game %s %s!", r.Method, id)
@@ -39,19 +40,23 @@ func JoinGameHandler(client *firestore.Client) utils.Handler {
 		if err != nil {
 			log.Panic("Could not parse URL")
 		}
-		gameIDArray, gameIDExists := paramMap["gameID"]
-		if !gameIDExists || len(gameIDArray) != 1 {
+		gameID, err := utils.GetQueryValue(&paramMap, "gameID")
+		if err != nil {
 			fmt.Fprintf(w, "Invalid gameID")
 			return
 		}
-		playerNameArray, playerNameExists := paramMap["playerName"]
-		if !playerNameExists || len(playerNameArray) != 1 {
+		playerName, err := utils.GetQueryValue(&paramMap, "playerName")
+		if err != nil {
 			fmt.Fprintf(w, "Invalid playerName")
 			return
 		}
-		gameID := gameIDArray[0]
-		playerName := playerNameArray[0]
-		err = db.AddPlayerToGame(ctx, client, gameID, playerName)
+		playerID, err := utils.GetQueryValue(&paramMap, "playerID")
+		if err != nil {
+			fmt.Fprintf(w, "Invalid playerID")
+			return
+		}
+
+		err = db.AddPlayerToGame(ctx, client, gameID, playerID, playerName)
 		if err != nil {
 			fmt.Fprintf(w, "Failed to add player %s to %s!", playerName, gameID)
 			return
@@ -96,5 +101,48 @@ func EchoHandler() utils.Handler {
 				break
 			}
 		}
+	})
+}
+
+// PlayerHandler todo
+func PlayerHandler(client *firestore.Client, hub *h.Hub) utils.Handler {
+	return utils.WebSocketRequest(func(r *http.Request, c *websocket.Conn) {
+		paramMap, err := url.ParseQuery(r.URL.RawQuery)
+		if err != nil {
+			log.Println("Could not parse URL")
+			return
+		}
+		gameID, err := utils.GetQueryValue(&paramMap, "gameID")
+		if err != nil {
+			c.WriteJSON(map[string]string{"error": "missing gameID field"})
+			c.Close()
+			return
+		}
+		playerID, err := utils.GetQueryValue(&paramMap, "playerID")
+		if err != nil {
+			c.WriteJSON(map[string]string{"error": "missing playerID field"})
+			c.Close()
+			return
+		}
+		log.Printf("Success: gameID %s playerID %s", gameID, playerID)
+		client := h.NewClient(gameID, playerID, hub, c)
+		hub.Register <- client
+		go func() {
+			for {
+				var incoming h.IncomingMessage
+				err := c.ReadJSON(incoming)
+				if err != nil {
+					if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+						log.Printf("error: %v", err)
+					}
+					log.Println("we breakin", err)
+					close(client.Cancel)
+					return
+				}
+				client.Incoming <- &incoming
+				log.Println("Received: ", incoming)
+			}
+		}()
+		client.Listen()
 	})
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"./game"
+	"./hub"
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
 	"google.golang.org/api/option"
@@ -40,9 +41,11 @@ func main() {
 		log.Fatalf("Failed initializing Firestore: %v", err)
 	}
 	defer client.Close()
+	hub := hub.NewHub(client)
+	go hub.Run()
 	http.HandleFunc("/", index)
 	http.HandleFunc("/game/create", game.CreateGameHandler(client))
 	http.HandleFunc("/game/join", game.JoinGameHandler(client))
-	http.HandleFunc("/ws", game.EchoHandler())
+	http.HandleFunc("/ws", game.PlayerHandler(client, hub))
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
