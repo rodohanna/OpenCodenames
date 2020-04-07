@@ -1,11 +1,15 @@
 import React from 'react';
 import './App.css';
+import 'semantic-ui-css/semantic.min.css';
+import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
 import useWebSocket from './hooks/useWebSocket';
+import Home from './Home';
+import Lobby from './Lobby';
 
 function App() {
-  const inputRef = React.useRef<HTMLInputElement | null>(null);
   const [messages, setMessages] = React.useState<Array<string>>([]);
   const [connected, incomingMessage, sendMessage] = useWebSocket('ws://localhost:8080/ws?gameID=IKWE&playerID=abc123');
+  console.log(connected, sendMessage);
   React.useEffect(() => {
     if (typeof incomingMessage.body === 'string') {
       setMessages([...messages, incomingMessage.body]);
@@ -13,26 +17,21 @@ function App() {
     // eslint-disable-next-line
   }, [incomingMessage]);
   return (
-    <div className="App">
-      <label>Send:</label>
-      <input
-        ref={inputRef}
-        type="text"
-        id="send"
-        name="send"
-        onKeyDown={(e) => {
-          if (e.keyCode === 13) {
-            connected && sendMessage({ body: inputRef.current?.value || 'empty' });
-          }
-        }}
-      />
-      <br />
-      <ul>
-        {messages.map((message, index) => (
-          <li key={`${message}${index}`}>{message}</li>
-        ))}
-      </ul>
-    </div>
+    <Router>
+      <div className="App">
+        <Switch>
+          <Route path="/lobby">
+            <Lobby />
+          </Route>
+          <Route path="/game">
+            <div />
+          </Route>
+          <Route path="/">
+            <Home />
+          </Route>
+        </Switch>
+      </div>
+    </Router>
   );
 }
 
