@@ -28,7 +28,16 @@ type Client struct {
 
 // NewClient creates a new client
 func NewClient(gameID string, playerID string, hub *Hub, conn *websocket.Conn, spectator bool) *Client {
-	return &Client{GameID: gameID, PlayerID: playerID, Hub: hub, Conn: conn, Incoming: make(chan *IncomingMessage), Cancel: make(chan struct{}), SpectatorOnly: spectator, send: make(chan *db.Game)}
+	return &Client{
+		GameID:        gameID,
+		PlayerID:      playerID,
+		Hub:           hub,
+		Conn:          conn,
+		Incoming:      make(chan *IncomingMessage),
+		Cancel:        make(chan struct{}),
+		SpectatorOnly: spectator,
+		send:          make(chan *db.Game),
+	}
 }
 
 // Listen broadcasts game changes and handles client actions
@@ -100,12 +109,14 @@ func (h *Hub) Run() {
 			if err != nil {
 				log.Println("Could not find game", err)
 				client.Conn.WriteJSON(map[string]string{"error": "could not find game"})
+				// closing the connection will trigger the client cancellation process from SpectatorHandler & PlayerHandler
 				client.Conn.Close()
 				continue
 			}
 			if _, ok := game.Players[client.PlayerID]; !ok && !client.SpectatorOnly {
 				log.Println("Player does not belong to game and is not spectator", err)
 				client.Conn.WriteJSON(map[string]string{"error": "access denied"})
+				// closing the connection will trigger the client cancellation process from SpectatorHandler & PlayerHandler
 				client.Conn.Close()
 				continue
 			}
