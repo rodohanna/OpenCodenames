@@ -38,7 +38,7 @@ func (c *Client) Listen() {
 		case message := <-c.Incoming:
 			if c.SpectatorOnly {
 				log.Println("only a specator, limited abilities")
-				return
+				continue
 			}
 			log.Println("recv", message)
 		case game := <-c.send:
@@ -99,11 +99,15 @@ func (h *Hub) Run() {
 			game, err := db.GetGame(ctx, h.fireStoreClient, client.GameID)
 			if err != nil {
 				log.Println("Could not find game", err)
-				return
+				client.Conn.WriteJSON(map[string]string{"error": "could not find game"})
+				client.Conn.Close()
+				continue
 			}
 			if _, ok := game.Players[client.PlayerID]; !ok && !client.SpectatorOnly {
 				log.Println("Player does not belong to game and is not spectator", err)
-				return
+				client.Conn.WriteJSON(map[string]string{"error": "access denied"})
+				client.Conn.Close()
+				continue
 			}
 			if h.clients[game.ID] == nil {
 				h.clients[game.ID] = make(map[string]*Client)
