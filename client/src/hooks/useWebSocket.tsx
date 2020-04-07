@@ -28,9 +28,9 @@ export default function (webSocketUrl: string): [boolean, Message, React.Dispatc
     });
   }, [socketUrl, socket]);
   React.useEffect(() => {
-    if (typeof latestSentMessage.body === 'string') {
-      socket?.send(latestSentMessage.body);
-    }
+    const preparedMessage = JSON.stringify({ Action: latestSentMessage.body });
+    console.log('sending', preparedMessage);
+    socket?.send(preparedMessage);
     // eslint-disable-next-line
   }, [latestSentMessage]);
   return [connected, incomingMessage, sendMessage];

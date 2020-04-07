@@ -47,5 +47,6 @@ func main() {
 	http.HandleFunc("/game/create", game.CreateGameHandler(client))
 	http.HandleFunc("/game/join", game.JoinGameHandler(client))
 	http.HandleFunc("/ws", game.PlayerHandler(client, hub))
+	http.HandleFunc("/ws/spectate", game.SpectatorHandler(client, hub))
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

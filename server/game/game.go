@@ -104,6 +104,48 @@ func EchoHandler() utils.Handler {
 	})
 }
 
+// SpectatorHandler todo
+func SpectatorHandler(client *firestore.Client, hub *h.Hub) utils.Handler {
+	return utils.WebSocketRequest(func(r *http.Request, c *websocket.Conn) {
+		paramMap, err := url.ParseQuery(r.URL.RawQuery)
+		if err != nil {
+			log.Println("Could not parse URL")
+			return
+		}
+		gameID, err := utils.GetQueryValue(&paramMap, "gameID")
+		if err != nil {
+			c.WriteJSON(map[string]string{"error": "missing gameID field"})
+			c.Close()
+			return
+		}
+		id, err := utils.MakeEasyID(10)
+		if err != nil {
+			c.WriteJSON(map[string]string{"error": "could not generate temporary id"})
+			c.Close()
+			return
+		}
+		client := h.NewClient(gameID, id, hub, c, true)
+		hub.Register <- client
+		go func() {
+			for {
+				var incoming h.IncomingMessage
+				err := c.ReadJSON(&incoming)
+				if err != nil {
+					if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+						log.Printf("error: %v", err)
+					}
+					log.Println("dropping connection, spectator encountered error", err)
+					close(client.Cancel)
+					return
+				}
+				// We drop anything the client sends us because they are only spectating
+				log.Println("Dropped: ", incoming)
+			}
+		}()
+		client.Listen()
+	})
+}
+
 // PlayerHandler todo
 func PlayerHandler(client *firestore.Client, hub *h.Hub) utils.Handler {
 	return utils.WebSocketRequest(func(r *http.Request, c *websocket.Conn) {
@@ -125,17 +167,17 @@ func PlayerHandler(client *firestore.Client, hub *h.Hub) utils.Handler {
 			return
 		}
 		log.Printf("Success: gameID %s playerID %s", gameID, playerID)
-		client := h.NewClient(gameID, playerID, hub, c)
+		client := h.NewClient(gameID, playerID, hub, c, false)
 		hub.Register <- client
 		go func() {
 			for {
 				var incoming h.IncomingMessage
-				err := c.ReadJSON(incoming)
+				err := c.ReadJSON(&incoming)
 				if err != nil {
 					if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 						log.Printf("error: %v", err)
 					}
-					log.Println("we breakin", err)
+					log.Println("dropping connection, client encountered error", err)
 					close(client.Cancel)
 					return
 				}
