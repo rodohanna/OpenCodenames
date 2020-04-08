@@ -7,7 +7,7 @@ function Lobby() {
   if (!query.has('gameID')) {
     return <div>Invalid link.</div>;
   }
-  const joinLink = `${window.origin}/gameID=${query.get('gameID')}`;
+  const joinLink = `${window.origin}?gameID=${query.get('gameID')}`;
   const watchLink = `${window.origin}/tv?gameID=${query.get('gameID')}`;
   return (
     <>

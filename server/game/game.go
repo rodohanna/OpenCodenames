@@ -22,7 +22,17 @@ func CreateGameHandler(client *firestore.Client) utils.Handler {
 		if err != nil {
 			log.Panic("Could not make an ID")
 		}
-		game := db.Game{ID: id, Status: "pending", Players: make(map[string]string)}
+		paramMap, err := url.ParseQuery(r.URL.RawQuery)
+		if err != nil {
+			log.Panic("Could not parse URL")
+		}
+		playerID, playerIDErr := utils.GetQueryValue(&paramMap, "playerID")
+		playerName, playerNameErr := utils.GetQueryValue(&paramMap, "playerName")
+		playerMap := make(map[string]string)
+		if len(playerID) > 0 && len(playerName) > 0 && playerIDErr == nil && playerNameErr == nil {
+			playerMap[playerID] = playerName
+		}
+		game := db.Game{ID: id, Status: "pending", Players: playerMap}
 		err = db.CreateGame(ctx, client, &game)
 		if err != nil {
 			fmt.Fprintf(w, "failed to create game %s %s!", r.Method, id)

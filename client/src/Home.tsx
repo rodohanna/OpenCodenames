@@ -3,27 +3,35 @@ import { Container, Divider, Button, Form, Grid, Segment, Header, Icon, Checkbox
 import { useHistory } from 'react-router-dom';
 import useAPI from './hooks/useAPI';
 import useQuery from './hooks/useQuery';
+import useLocalStorage from './hooks/useLocalStorage';
+import { v4 as uuidv4 } from 'uuid';
 
 function Home() {
   const query = useQuery();
   const history = useHistory();
   const [gameIDFieldRequiredError, setGameIDFieldRequiredError] = React.useState(false);
-  const [playerNameFieldRequiredError, setPlayerNameFieldRequiredError] = React.useState(false);
+  const [joinGamePlayerNameFieldRequiredError, setJoinGamePlayerNameFieldRequiredError] = React.useState(false);
+  const [createGamePlayerNameFieldRequiredError, setCreateGamePlayerNameFieldRequiredError] = React.useState(false);
   const [playingOnThisDevice, setPlayingOnThisDevice] = React.useState(true);
   const [joinGameID, setJoinGameID] = React.useState<string | null>(query.get('gameID'));
-  const [playerName, setPlayerName] = React.useState<string | null>(null);
+  const [joinGamePlayerName, setJoinGamePlayerName] = React.useState<string | null>(null);
+  const [createGamePlayerName, setCreateGamePlayerName] = React.useState<string | null>(null);
   const [shouldCreateGame, setShouldCreateGame] = React.useState(false);
   const [shouldJoinGame, setShouldJoinGame] = React.useState(false);
   const gameIDInParams = query.has('gameID');
+  const [playerID, setPlayerID] = useLocalStorage('playerID');
+  if (playerID === null) {
+    setPlayerID(uuidv4());
+  }
   const [createGameLoading, createGameError, createGameResult] = useAPI({
-    endpoint: '/game/create',
+    endpoint: `/game/create${playingOnThisDevice ? `?playerID=${playerID}&playerName=${createGamePlayerName}` : ''}`,
     method: 'POST',
-    skip: !shouldCreateGame,
+    skip: !shouldCreateGame || (playingOnThisDevice && (createGamePlayerName === null || createGamePlayerName === '')),
   });
   const [joinGameLoading, joinGameError, joinGameResult] = useAPI({
-    endpoint: `/game/join?gameID=${joinGameID}&playerName=foo&playerID=bar`,
+    endpoint: `/game/join?gameID=${joinGameID}&playerName=${joinGamePlayerName}&playerID=${playerID}`,
     method: 'POST',
-    skip: !shouldJoinGame,
+    skip: !shouldJoinGame || joinGamePlayerName === null || joinGamePlayerName === '',
   });
   if (createGameResult?.id) {
     history.push(`/lobby?gameID=${createGameResult?.id}`);
@@ -61,7 +69,7 @@ function Home() {
                     if (e.target.value.length > 0 && gameIDFieldRequiredError) {
                       setGameIDFieldRequiredError(false);
                     }
-                    setJoinGameID(e.target.value);
+                    setJoinGameID(e.target.value.replace(/\s/g, '').slice(0, 16).toLocaleUpperCase());
                   }}
                   error={gameIDFieldRequiredError}
                 />
@@ -70,26 +78,26 @@ function Home() {
                   iconPosition="left"
                   label="Enter a name"
                   placeholder="Morgana"
-                  value={playerName || ''}
+                  value={joinGamePlayerName || ''}
                   onChange={(e) => {
-                    if (e.target.value.length > 0 && playerNameFieldRequiredError) {
-                      setPlayerNameFieldRequiredError(false);
+                    if (e.target.value.length > 0 && joinGamePlayerNameFieldRequiredError) {
+                      setJoinGamePlayerNameFieldRequiredError(false);
                     }
-                    setPlayerName(e.target.value);
+                    setJoinGamePlayerName(e.target.value.replace(/\s/g, '').slice(0, 16));
                   }}
-                  error={playerNameFieldRequiredError}
+                  error={joinGamePlayerNameFieldRequiredError}
                 />
                 <Button
                   content="Join game"
                   color="blue"
                   onClick={(_e) => {
                     const gameIDNotSet = joinGameID === null || joinGameID === '';
-                    const playerNameNotSet = playerName === null || playerName === '';
+                    const playerNameNotSet = joinGamePlayerName === null || joinGamePlayerName === '';
                     if (gameIDNotSet) {
                       setGameIDFieldRequiredError(true);
                     }
                     if (playerNameNotSet) {
-                      setPlayerNameFieldRequiredError(true);
+                      setJoinGamePlayerNameFieldRequiredError(true);
                     }
                     if (gameIDNotSet || playerNameNotSet) {
                       return;
@@ -103,21 +111,27 @@ function Home() {
               <>
                 <Divider vertical>Or</Divider>
                 <Grid.Column verticalAlign="middle">
-                  <div>
-                    <Button
-                      content="New game"
-                      icon="add square"
-                      size="big"
-                      color="blue"
-                      onClick={() => {
-                        setShouldCreateGame(true);
+                  <Form>
+                    <Form.Input
+                      icon="add user"
+                      iconPosition="left"
+                      label={<label style={{ textAlign: 'left' }}>Enter a name</label>}
+                      placeholder="Ryuji"
+                      value={createGamePlayerName || ''}
+                      onChange={(e) => {
+                        if (e.target.value.length > 0 && createGamePlayerNameFieldRequiredError) {
+                          setCreateGamePlayerNameFieldRequiredError(false);
+                        }
+                        setCreateGamePlayerName(e.target.value.replace(/\s/g, '').slice(0, 16));
                       }}
+                      error={createGamePlayerNameFieldRequiredError}
+                      disabled={!playingOnThisDevice}
                     />
-                    <br />
                     <Popup
                       content="Disabling this will require you to join the game on a different device."
                       trigger={
                         <Checkbox
+                          style={{ marginBottom: '15px' }}
                           label="I'll be playing on this device"
                           checked={playingOnThisDevice}
                           onChange={(_e) => {
@@ -127,7 +141,20 @@ function Home() {
                         />
                       }
                     />
-                  </div>
+                    <Button
+                      content="New game"
+                      icon="add square"
+                      size="big"
+                      color="blue"
+                      onClick={() => {
+                        if (playingOnThisDevice && (createGamePlayerName === null || createGamePlayerName === '')) {
+                          setCreateGamePlayerNameFieldRequiredError(true);
+                          return;
+                        }
+                        setShouldCreateGame(true);
+                      }}
+                    />
+                  </Form>
                 </Grid.Column>
               </>
             )}
