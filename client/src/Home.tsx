@@ -2,14 +2,19 @@ import React from 'react';
 import { Container, Divider, Button, Form, Grid, Segment, Header, Icon, Checkbox, Popup } from 'semantic-ui-react';
 import { useHistory } from 'react-router-dom';
 import useAPI from './hooks/useAPI';
+import useQuery from './hooks/useQuery';
 
 function Home() {
+  const query = useQuery();
   const history = useHistory();
-  const [fieldRequiredError, setFieldRequiredError] = React.useState(false);
+  const [gameIDFieldRequiredError, setGameIDFieldRequiredError] = React.useState(false);
+  const [playerNameFieldRequiredError, setPlayerNameFieldRequiredError] = React.useState(false);
   const [playingOnThisDevice, setPlayingOnThisDevice] = React.useState(true);
-  const [joinGameID, setJoinGameID] = React.useState<string | null>(null);
+  const [joinGameID, setJoinGameID] = React.useState<string | null>(query.get('gameID'));
+  const [playerName, setPlayerName] = React.useState<string | null>(null);
   const [shouldCreateGame, setShouldCreateGame] = React.useState(false);
   const [shouldJoinGame, setShouldJoinGame] = React.useState(false);
+  const gameIDInParams = query.has('gameID');
   const [createGameLoading, createGameError, createGameResult] = useAPI({
     endpoint: '/game/create',
     method: 'POST',
@@ -43,7 +48,7 @@ function Home() {
       <Container textAlign="justified">
         <Divider />
         <Segment placeholder>
-          <Grid columns={2} relaxed="very" stackable centered>
+          <Grid columns={gameIDInParams ? 1 : 2} relaxed="very" stackable centered>
             <Grid.Column>
               <Form>
                 <Form.Input
@@ -51,20 +56,42 @@ function Home() {
                   iconPosition="left"
                   label="Enter a game ID"
                   placeholder="FRXX..."
+                  value={joinGameID || ''}
                   onChange={(e) => {
-                    if (e.target.value.length > 0 && fieldRequiredError) {
-                      setFieldRequiredError(false);
+                    if (e.target.value.length > 0 && gameIDFieldRequiredError) {
+                      setGameIDFieldRequiredError(false);
                     }
                     setJoinGameID(e.target.value);
                   }}
-                  error={fieldRequiredError}
+                  error={gameIDFieldRequiredError}
+                />
+                <Form.Input
+                  icon="add user"
+                  iconPosition="left"
+                  label="Enter a name"
+                  placeholder="Morgana"
+                  value={playerName || ''}
+                  onChange={(e) => {
+                    if (e.target.value.length > 0 && playerNameFieldRequiredError) {
+                      setPlayerNameFieldRequiredError(false);
+                    }
+                    setPlayerName(e.target.value);
+                  }}
+                  error={playerNameFieldRequiredError}
                 />
                 <Button
                   content="Join game"
                   color="blue"
                   onClick={(_e) => {
-                    if (joinGameID === null || joinGameID === '') {
-                      setFieldRequiredError(true);
+                    const gameIDNotSet = joinGameID === null || joinGameID === '';
+                    const playerNameNotSet = playerName === null || playerName === '';
+                    if (gameIDNotSet) {
+                      setGameIDFieldRequiredError(true);
+                    }
+                    if (playerNameNotSet) {
+                      setPlayerNameFieldRequiredError(true);
+                    }
+                    if (gameIDNotSet || playerNameNotSet) {
                       return;
                     }
                     setShouldJoinGame(true);
@@ -72,34 +99,38 @@ function Home() {
                 />
               </Form>
             </Grid.Column>
-            <Divider vertical>Or</Divider>
-            <Grid.Column verticalAlign="middle">
-              <div>
-                <Button
-                  content="New game"
-                  icon="add square"
-                  size="big"
-                  color="blue"
-                  onClick={() => {
-                    setShouldCreateGame(true);
-                  }}
-                />
-                <br />
-                <Popup
-                  content="Disabling this will require you to join the game on a different device."
-                  trigger={
-                    <Checkbox
-                      label="I'll be playing on this device"
-                      checked={playingOnThisDevice}
-                      onChange={(_e) => {
-                        setPlayingOnThisDevice(!playingOnThisDevice);
+            {!gameIDInParams && (
+              <>
+                <Divider vertical>Or</Divider>
+                <Grid.Column verticalAlign="middle">
+                  <div>
+                    <Button
+                      content="New game"
+                      icon="add square"
+                      size="big"
+                      color="blue"
+                      onClick={() => {
+                        setShouldCreateGame(true);
                       }}
-                      toggle
                     />
-                  }
-                />
-              </div>
-            </Grid.Column>
+                    <br />
+                    <Popup
+                      content="Disabling this will require you to join the game on a different device."
+                      trigger={
+                        <Checkbox
+                          label="I'll be playing on this device"
+                          checked={playingOnThisDevice}
+                          onChange={(_e) => {
+                            setPlayingOnThisDevice(!playingOnThisDevice);
+                          }}
+                          toggle
+                        />
+                      }
+                    />
+                  </div>
+                </Grid.Column>
+              </>
+            )}
           </Grid>
         </Segment>
       </Container>
