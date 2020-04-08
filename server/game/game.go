@@ -28,7 +28,7 @@ func CreateGameHandler(client *firestore.Client) utils.Handler {
 			fmt.Fprintf(w, "failed to create game %s %s!", r.Method, id)
 			return
 		}
-		fmt.Fprintf(w, "successfully created game %s %s!", r.Method, id)
+		fmt.Fprintf(w, `{"id":"%s"}`, id)
 	})
 }
 
@@ -61,7 +61,7 @@ func JoinGameHandler(client *firestore.Client) utils.Handler {
 			fmt.Fprintf(w, "Failed to add player %s to %s!", playerName, gameID)
 			return
 		}
-		fmt.Fprintf(w, "Successfully added player \"%s\" to %s!", playerName, gameID)
+		fmt.Fprintf(w, `{"success":true}`)
 	})
 }
 

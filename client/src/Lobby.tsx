@@ -1,47 +1,53 @@
 import React from 'react';
-// import { useLocation } from 'react-router-dom';
-import { Container, Header, Icon, Divider, Grid, SemanticCOLORS } from 'semantic-ui-react';
+import { Container, Header, Icon, Divider, Card, Message } from 'semantic-ui-react';
+import useQuery from './hooks/useQuery';
 
 function Lobby() {
-  //   const location = useLocation();
-  const colors: Array<SemanticCOLORS> = [
-    'red',
-    'orange',
-    'yellow',
-    'olive',
-    'green',
-    'teal',
-    'blue',
-    'violet',
-    'purple',
-    'pink',
-    'brown',
-    'grey',
-    'black',
-  ];
-
+  const query = useQuery();
+  if (!query.has('gameID')) {
+    return <div>Invalid link.</div>;
+  }
+  const joinLink = `${window.origin}/join?gameID=${query.get('gameID')}`;
+  const watchLink = `${window.origin}/tv?gameID=${query.get('gameID')}`;
   return (
     <>
       <Container textAlign="center">
         <Header as="h2" icon inverted>
           <Icon name="stopwatch" />
           Lobby
-          <Header.Subheader>Waiting to start</Header.Subheader>
+          <Header.Subheader>Waiting on players</Header.Subheader>
         </Header>
+      </Container>
+      <Container textAlign="center">
+        <Message
+          compact
+          header="Invite friends!"
+          content={
+            <div style={{ textAlign: 'left' }}>
+              <span>
+                Join: <a href={joinLink}>{joinLink}</a>
+              </span>
+              <br />
+              <span>
+                TV: <a href={watchLink}>{watchLink}</a>
+              </span>
+            </div>
+          }
+        />
       </Container>
       <Container textAlign="justified">
         <Divider />
-
-        <Grid columns={3} relaxed="very" padded>
-          {colors.map((color) => (
-            <Grid.Column color={color} key={color}>
-              <Header as="h2" inverted textAlign="center">
-                <Icon name="heart" size="tiny" />
-                Name
-              </Header>
-            </Grid.Column>
-          ))}
-        </Grid>
+        <Card.Group centered>
+          <Card color="red">
+            <Card.Content>
+              <Card.Description textAlign="center">
+                <Header as="h2" icon>
+                  Chungo
+                </Header>
+              </Card.Description>
+            </Card.Content>
+          </Card>
+        </Card.Group>
       </Container>
     </>
   );

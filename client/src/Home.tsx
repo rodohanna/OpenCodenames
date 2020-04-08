@@ -1,12 +1,36 @@
 import React from 'react';
 import { Container, Divider, Button, Form, Grid, Segment, Header, Icon, Checkbox, Popup } from 'semantic-ui-react';
 import { useHistory } from 'react-router-dom';
+import useAPI from './hooks/useAPI';
 
 function Home() {
   const history = useHistory();
   const [fieldRequiredError, setFieldRequiredError] = React.useState(false);
   const [playingOnThisDevice, setPlayingOnThisDevice] = React.useState(true);
   const [joinGameID, setJoinGameID] = React.useState<string | null>(null);
+  const [shouldCreateGame, setShouldCreateGame] = React.useState(false);
+  const [shouldJoinGame, setShouldJoinGame] = React.useState(false);
+  const [createGameLoading, createGameError, createGameResult] = useAPI({
+    endpoint: '/game/create',
+    method: 'POST',
+    skip: !shouldCreateGame,
+  });
+  const [joinGameLoading, joinGameError, joinGameResult] = useAPI({
+    endpoint: `/game/join?gameID=${joinGameID}&playerName=foo&playerID=bar`,
+    method: 'POST',
+    skip: !shouldJoinGame,
+  });
+  if (createGameResult?.id) {
+    history.push(`/lobby?gameID=${createGameResult?.id}`);
+  } else if (createGameError) {
+    return <div>Something broke.. Try refreshing the page.</div>;
+  }
+  if (joinGameResult?.success) {
+    history.push(`/lobby?gameID=${joinGameID}`);
+  } else if (joinGameError) {
+    return <div>Something broke.. Try refreshing the page.</div>;
+  }
+  console.log({ createGameLoading, joinGameLoading });
   return (
     <>
       <Container textAlign="center">
@@ -43,7 +67,7 @@ function Home() {
                       setFieldRequiredError(true);
                       return;
                     }
-                    history.push('/lobby', { gameID: joinGameID });
+                    setShouldJoinGame(true);
                   }}
                 />
               </Form>
@@ -57,10 +81,7 @@ function Home() {
                   size="big"
                   color="blue"
                   onClick={() => {
-                    history.push('/lobby', {
-                      gameID: null,
-                      willBePlayingOnThisDevice: playingOnThisDevice,
-                    });
+                    setShouldCreateGame(true);
                   }}
                 />
                 <br />
