@@ -15,23 +15,22 @@ export default function useAPI({ endpoint, method, skip }: useAPIParams) {
     setLoading(true);
   }
 
-  const executeRequest = async () => {
-    try {
-      const res = await fetch(endpoint, {
-        method,
-      });
-      setResult(await res.json());
-    } catch (error) {
-      setHasError(true);
-    }
-    setLoading(false);
-  };
-
   React.useEffect(() => {
     if (!skip) {
+      const executeRequest = async () => {
+        try {
+          const res = await fetch(endpoint, {
+            method,
+          });
+          setResult(await res.json());
+        } catch (error) {
+          setHasError(true);
+        }
+        setLoading(false);
+      };
       executeRequest();
     }
-  }, [skip]);
+  }, [skip, endpoint, method]);
 
   return [loading, hasError, result];
 }

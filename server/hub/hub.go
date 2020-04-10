@@ -2,6 +2,7 @@ package hub
 
 import (
 	"context"
+	"errors"
 	"log"
 
 	"../db"
@@ -40,6 +41,29 @@ func NewClient(gameID string, playerID string, hub *Hub, conn *websocket.Conn, s
 	}
 }
 
+type spectatorGame struct {
+	ID      string
+	Status  string
+	Players []string
+	You     string
+}
+
+func mapGameToSpectatorGame(game *db.Game, playerID string) (*spectatorGame, error) {
+	if _, ok := game.Players[playerID]; !ok {
+		return nil, errors.New("Provided game and playerID do not match")
+	}
+	log.Println(game.Players)
+	sg := &spectatorGame{
+		ID:      game.ID,
+		Status:  game.Status,
+		Players: make([]string, 0, len(game.Players)),
+		You:     game.Players[playerID]}
+	for _, playerName := range game.Players {
+		sg.Players = append(sg.Players, playerName)
+	}
+	return sg, nil
+}
+
 // Listen broadcasts game changes and handles client actions
 func (c *Client) Listen() {
 	for {
@@ -52,7 +76,11 @@ func (c *Client) Listen() {
 			log.Println("recv", message)
 		case game := <-c.send:
 			log.Println("send", game)
-			c.Conn.WriteJSON(map[string]db.Game{"game": *game})
+			sg, err := mapGameToSpectatorGame(game, c.PlayerID)
+			if err != nil {
+				log.Println("Game broadcast error", err)
+			}
+			c.Conn.WriteJSON(map[string]*spectatorGame{"game": sg})
 		case <-c.Cancel:
 			log.Println("done")
 			c.Hub.unregister <- c

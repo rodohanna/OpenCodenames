@@ -4,27 +4,15 @@ import 'semantic-ui-css/semantic.min.css';
 import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
 // import useWebSocket from './hooks/useWebSocket';
 import Home from './Home';
-import Lobby from './Lobby';
+import Game from './Game';
 
 function App() {
-  // const [messages, setMessages] = React.useState<Array<string>>([]);
-  // const [connected, incomingMessage, sendMessage] = useWebSocket('ws://localhost:8080/ws?gameID=IKWE&playerID=abc123');
-  // console.log(connected, sendMessage);
-  // React.useEffect(() => {
-  //   if (typeof incomingMessage.body === 'string') {
-  //     setMessages([...messages, incomingMessage.body]);
-  //   }
-  //   // eslint-disable-next-line
-  // }, [incomingMessage]);
   return (
     <Router>
       <div className="App">
         <Switch>
-          <Route path="/lobby">
-            <Lobby />
-          </Route>
           <Route path="/game">
-            <div />
+            <Game />
           </Route>
           <Route path="/">
             <Home />

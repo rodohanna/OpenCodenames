@@ -1,14 +1,12 @@
 import React from 'react';
 import { Container, Header, Icon, Divider, Card, Message } from 'semantic-ui-react';
-import useQuery from './hooks/useQuery';
 
-function Lobby() {
-  const query = useQuery();
-  if (!query.has('gameID')) {
-    return <div>Invalid link.</div>;
-  }
-  const joinLink = `${window.origin}?gameID=${query.get('gameID')}`;
-  const watchLink = `${window.origin}/tv?gameID=${query.get('gameID')}`;
+type LobbyProps = {
+  game: Game;
+};
+function Lobby({ game }: LobbyProps) {
+  const joinLink = `${window.origin}?gameID=${game.ID}`;
+  const watchLink = `${window.origin}/game?gameID=${game.ID}&spectate`;
   return (
     <>
       <Container textAlign="center">
@@ -38,15 +36,17 @@ function Lobby() {
       <Container textAlign="justified">
         <Divider />
         <Card.Group centered>
-          <Card color="red">
-            <Card.Content>
-              <Card.Description textAlign="center">
-                <Header as="h2" icon>
-                  Chungo
-                </Header>
-              </Card.Description>
-            </Card.Content>
-          </Card>
+          {game.Players.sort().map((playerName) => (
+            <Card color="red" key={playerName}>
+              <Card.Content>
+                <Card.Description textAlign="center">
+                  <Header as="h2" icon>
+                    {playerName}
+                  </Header>
+                </Card.Description>
+              </Card.Content>
+            </Card>
+          ))}
         </Card.Group>
       </Container>
     </>

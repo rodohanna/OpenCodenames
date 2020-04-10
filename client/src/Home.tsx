@@ -34,12 +34,12 @@ function Home() {
     skip: !shouldJoinGame || joinGamePlayerName === null || joinGamePlayerName === '',
   });
   if (createGameResult?.id) {
-    history.push(`/lobby?gameID=${createGameResult?.id}`);
+    history.push(`/game?gameID=${createGameResult?.id}`);
   } else if (createGameError) {
     return <div>Something broke.. Try refreshing the page.</div>;
   }
   if (joinGameResult?.success) {
-    history.push(`/lobby?gameID=${joinGameID}`);
+    history.push(`/game?gameID=${joinGameID}`);
   } else if (joinGameError) {
     return <div>Something broke.. Try refreshing the page.</div>;
   }
