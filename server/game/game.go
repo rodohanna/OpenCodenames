@@ -29,10 +29,20 @@ func CreateGameHandler(client *firestore.Client) utils.Handler {
 		playerID, playerIDErr := utils.GetQueryValue(&paramMap, "playerID")
 		playerName, playerNameErr := utils.GetQueryValue(&paramMap, "playerName")
 		playerMap := make(map[string]string)
+		teamRed := make(map[string]string)
+		teamBlue := make(map[string]string)
+		creatorID := ""
 		if len(playerID) > 0 && len(playerName) > 0 && playerIDErr == nil && playerNameErr == nil {
 			playerMap[playerID] = playerName
+			creatorID = playerID
 		}
-		game := db.Game{ID: id, Status: "pending", Players: playerMap}
+		game := db.Game{
+			ID:        id,
+			Status:    "pending",
+			Players:   playerMap,
+			CreatorID: creatorID,
+			TeamRed:   teamRed,
+			TeamBlue:  teamBlue}
 		err = db.CreateGame(ctx, client, &game)
 		if err != nil {
 			fmt.Fprintf(w, "failed to create game %s %s!", r.Method, id)
@@ -68,7 +78,8 @@ func JoinGameHandler(client *firestore.Client) utils.Handler {
 
 		err = db.AddPlayerToGame(ctx, client, gameID, playerID, playerName)
 		if err != nil {
-			fmt.Fprintf(w, "Failed to add player %s to %s!", playerName, gameID)
+			log.Printf("Failed to add player %s to %s!", playerName, gameID)
+			fmt.Fprintf(w, `{"error":"%s"}`, err)
 			return
 		}
 		fmt.Fprintf(w, `{"success":true}`)

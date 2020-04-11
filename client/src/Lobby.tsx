@@ -1,10 +1,11 @@
 import React from 'react';
-import { Container, Header, Icon, Divider, Card, Message } from 'semantic-ui-react';
+import { Container, Header, Icon, Divider, Card, Message, Button } from 'semantic-ui-react';
 
 type LobbyProps = {
   game: Game;
+  sendMessage: (message: string) => void;
 };
-function Lobby({ game }: LobbyProps) {
+function Lobby({ game, sendMessage }: LobbyProps) {
   const joinLink = `${window.origin}?gameID=${game.ID}`;
   const watchLink = `${window.origin}/game?gameID=${game.ID}&spectate`;
   return (
@@ -32,6 +33,9 @@ function Lobby({ game }: LobbyProps) {
             </div>
           }
         />
+      </Container>
+      <Container>
+        <Button onClick={() => sendMessage('StartGame')}>Start game</Button>
       </Container>
       <Container textAlign="justified">
         <Divider />

@@ -42,10 +42,12 @@ func NewClient(gameID string, playerID string, hub *Hub, conn *websocket.Conn, s
 }
 
 type spectatorGame struct {
-	ID      string
-	Status  string
-	Players []string
-	You     string
+	ID       string
+	Status   string
+	Players  []string
+	You      string
+	TeamRed  []string
+	TeamBlue []string
 }
 
 func mapGameToSpectatorGame(game *db.Game, playerID string) (*spectatorGame, error) {
@@ -54,18 +56,27 @@ func mapGameToSpectatorGame(game *db.Game, playerID string) (*spectatorGame, err
 	}
 	log.Println(game.Players)
 	sg := &spectatorGame{
-		ID:      game.ID,
-		Status:  game.Status,
-		Players: make([]string, 0, len(game.Players)),
-		You:     game.Players[playerID]}
+		ID:       game.ID,
+		Status:   game.Status,
+		Players:  make([]string, 0, len(game.Players)),
+		You:      game.Players[playerID],
+		TeamRed:  make([]string, 0, len(game.TeamRed)),
+		TeamBlue: make([]string, 0, len(game.TeamBlue))}
 	for _, playerName := range game.Players {
 		sg.Players = append(sg.Players, playerName)
+	}
+	for _, playerName := range game.TeamRed {
+		sg.TeamRed = append(sg.TeamRed, playerName)
+	}
+	for _, playerName := range game.TeamBlue {
+		sg.TeamBlue = append(sg.TeamBlue, playerName)
 	}
 	return sg, nil
 }
 
 // Listen broadcasts game changes and handles client actions
 func (c *Client) Listen() {
+	ctx := context.Background()
 	for {
 		select {
 		case message := <-c.Incoming:
@@ -73,7 +84,35 @@ func (c *Client) Listen() {
 				log.Println("only a specator, limited abilities")
 				continue
 			}
-			log.Println("recv", message)
+			switch message.Action {
+			case "StartGame":
+				log.Println("StartGame Handler")
+				game, ok := c.Hub.games[c.GameID]
+				if !ok {
+					log.Println("Error: could not find client game")
+					continue
+				}
+				if game.Status == "pending" && len(game.Players) >= 4 && game.CreatorID == c.PlayerID {
+					log.Println("Starting Game", c.GameID)
+					teamRed := map[string]string{}
+					teamBlue := map[string]string{}
+					i := 0
+					for playerID, playerName := range game.Players {
+						if i%2 == 0 {
+							teamRed[playerID] = playerName
+						} else {
+							teamBlue[playerID] = playerName
+						}
+						i++
+					}
+					db.UpdateGame(ctx, c.Hub.fireStoreClient, c.GameID, map[string]interface{}{
+						"status":   "running",
+						"teamRed":  teamRed,
+						"teamBlue": teamBlue,
+					})
+				}
+			}
+			log.Println("recv", message.Action)
 		case game := <-c.send:
 			log.Println("send", game)
 			sg, err := mapGameToSpectatorGame(game, c.PlayerID)

@@ -3,8 +3,7 @@ import { Container, Divider, Button, Form, Grid, Segment, Header, Icon, Checkbox
 import { useHistory } from 'react-router-dom';
 import useAPI from './hooks/useAPI';
 import useQuery from './hooks/useQuery';
-import useLocalStorage from './hooks/useLocalStorage';
-import { v4 as uuidv4 } from 'uuid';
+import usePlayerID from './hooks/userPlayerID';
 
 function Home() {
   const query = useQuery();
@@ -19,19 +18,19 @@ function Home() {
   const [shouldCreateGame, setShouldCreateGame] = React.useState(false);
   const [shouldJoinGame, setShouldJoinGame] = React.useState(false);
   const gameIDInParams = query.has('gameID');
-  const [playerID, setPlayerID] = useLocalStorage('playerID');
-  if (playerID === null) {
-    setPlayerID(uuidv4());
-  }
+  const playerID = usePlayerID();
   const [createGameLoading, createGameError, createGameResult] = useAPI({
     endpoint: `/game/create${playingOnThisDevice ? `?playerID=${playerID}&playerName=${createGamePlayerName}` : ''}`,
     method: 'POST',
-    skip: !shouldCreateGame || (playingOnThisDevice && (createGamePlayerName === null || createGamePlayerName === '')),
+    skip:
+      !shouldCreateGame ||
+      (playingOnThisDevice && (createGamePlayerName === null || createGamePlayerName === '')) ||
+      playerID === null,
   });
   const [joinGameLoading, joinGameError, joinGameResult] = useAPI({
     endpoint: `/game/join?gameID=${joinGameID}&playerName=${joinGamePlayerName}&playerID=${playerID}`,
     method: 'POST',
-    skip: !shouldJoinGame || joinGamePlayerName === null || joinGamePlayerName === '',
+    skip: !shouldJoinGame || joinGamePlayerName === null || joinGamePlayerName === '' || playerID === null,
   });
   if (createGameResult?.id) {
     history.push(`/game?gameID=${createGameResult?.id}`);
@@ -43,7 +42,7 @@ function Home() {
   } else if (joinGameError) {
     return <div>Something broke.. Try refreshing the page.</div>;
   }
-  console.log({ createGameLoading, joinGameLoading });
+  console.log({ createGameLoading, joinGameLoading }, joinGameResult);
   return (
     <>
       <Container textAlign="center">

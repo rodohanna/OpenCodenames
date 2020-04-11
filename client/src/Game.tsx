@@ -2,22 +2,18 @@ import React from 'react';
 import Lobby from './Lobby';
 import useQuery from './hooks/useQuery';
 import useWebSocket from './hooks/useWebSocket';
-import useLocalStorage from './hooks/useLocalStorage';
-import { v4 as uuidv4 } from 'uuid';
+import usePlayerID from './hooks/userPlayerID';
 
 function Game() {
   const query = useQuery();
   const gameID = query.get('gameID');
+  // const isSpectator = query.has('spectate');
   const [game, setGame] = React.useState<Game | null>(null);
-  // TODO: create usePlayerID hook
-  const [playerID, setPlayerID] = useLocalStorage('playerID');
-  const [connected, incomingMessage] = useWebSocket({
+  const playerID = usePlayerID();
+  const [connected, incomingMessage, sendMessage] = useWebSocket({
     webSocketUrl: `ws://localhost:8080/ws?gameID=${gameID}&playerID=${playerID}`,
     skip: typeof gameID !== 'string' && playerID !== null,
   });
-  if (playerID === null) {
-    setPlayerID(uuidv4());
-  }
   React.useEffect(() => {
     setGame(incomingMessage);
   }, [incomingMessage]);
@@ -27,7 +23,17 @@ function Game() {
   if (game === null || !connected) {
     return <div>Loading</div>;
   }
-  return <Lobby game={game} />;
+  switch (game?.Status) {
+    case 'pending': {
+      return <Lobby game={game} sendMessage={sendMessage} />;
+    }
+    case 'running': {
+      return <div>Game is running: {JSON.stringify(game)}</div>;
+    }
+    default: {
+      return <div>Unknown Game State {JSON.stringify(game)}</div>;
+    }
+  }
 }
 
 export default Game;

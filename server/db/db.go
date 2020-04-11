@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 
+	"../config"
 	"cloud.google.com/go/firestore"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -12,9 +13,24 @@ import (
 
 // Game represents a game.
 type Game struct {
-	ID      string            `firestore:"id"`
-	Status  string            `firestore:"status"`
-	Players map[string]string `firestore:"players"`
+	ID        string            `firestore:"id"`
+	Status    string            `firestore:"status"`
+	Players   map[string]string `firestore:"players"`
+	CreatorID string            `firestore:"creatorID"`
+	TeamRed   map[string]string `firestore:"teamRed"`
+	TeamBlue  map[string]string `firestore:"teamBlue"`
+}
+
+// UpdateGame Updates a game
+func UpdateGame(ctx context.Context, client *firestore.Client, gameID string, fieldsToUpdate map[string]interface{}) error {
+	ref := client.Collection("games").Doc(gameID)
+	err := client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		return tx.Set(ref, fieldsToUpdate, firestore.MergeAll)
+	})
+	if err != nil {
+		log.Printf("UpdateGame: An error has occurred: %s", err)
+	}
+	return err
 }
 
 // CreateGame Creates a game or returns an error if one already exists
@@ -45,14 +61,27 @@ func AddPlayerToGame(ctx context.Context, client *firestore.Client, gameID strin
 		if err := doc.DataTo(&game); err != nil {
 			return err
 		}
-		_, playerFound := game.Players[playerID]
-		if playerFound {
-			return errors.New("playerID already added")
+		if _, playerFound := game.Players[playerID]; playerFound {
+			return errors.New("playerAlreadyAdded")
+		}
+		for _, otherPlayerName := range game.Players {
+			if playerName == otherPlayerName {
+				return errors.New("nameAlreadyTaken")
+			}
+		}
+		if len(game.Players) >= config.PlayerLimit() {
+			return errors.New("gameIsFull")
+		}
+		if game.Status != "pending" {
+			return errors.New("gameAlreadyStarted")
+		}
+		fieldsToUpdate := map[string]interface{}{}
+		if len(game.Players) == 0 {
+			fieldsToUpdate["creatorID"] = playerID
 		}
 		game.Players[playerID] = playerName
-		return tx.Set(ref, map[string]interface{}{
-			"players": game.Players,
-		}, firestore.MergeAll)
+		fieldsToUpdate["players"] = game.Players
+		return tx.Set(ref, fieldsToUpdate, firestore.MergeAll)
 	})
 	if err != nil {
 		log.Printf("JoinGame: An error has occurred: %s", err)

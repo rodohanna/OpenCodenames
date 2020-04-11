@@ -8,11 +8,11 @@ type useWebSocketParams = {
 export default function ({
   webSocketUrl,
   skip,
-}: useWebSocketParams): [boolean, Game | null, React.Dispatch<React.SetStateAction<Message>>] {
+}: useWebSocketParams): [boolean, Game | null, (message: string) => void] {
   const [socketUrl] = React.useState(webSocketUrl);
   const [socket, setSocket] = React.useState<WebSocket | null>(null);
   const [connected, setConnected] = React.useState(false);
-  const [latestSentMessage, sendMessage] = React.useState<Message>({ body: null });
+  const [latestSentMessage, sendMessage] = React.useState<Message | null>(null);
   const [incomingMessage, receiveMessage] = React.useState<Game | null>(null);
   React.useEffect(() => {
     if (!skip) {
@@ -37,10 +37,13 @@ export default function ({
     }
   }, [socketUrl, socket, skip]);
   React.useEffect(() => {
-    const preparedMessage = JSON.stringify({ Action: 'noop' });
+    const preparedMessage = JSON.stringify(latestSentMessage);
     console.log('sending', preparedMessage);
     socket?.send(preparedMessage);
     // eslint-disable-next-line
   }, [latestSentMessage]);
-  return [connected, incomingMessage, sendMessage];
+  const sendMessageWrapper = (message: string) => {
+    sendMessage({ Action: message });
+  };
+  return [connected, incomingMessage, sendMessageWrapper];
 }
