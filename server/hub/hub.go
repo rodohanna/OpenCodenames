@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"math/rand"
 
 	"../db"
 	"cloud.google.com/go/firestore"
@@ -42,26 +43,36 @@ func NewClient(gameID string, playerID string, hub *Hub, conn *websocket.Conn, s
 }
 
 type spectatorGame struct {
-	ID       string
-	Status   string
-	Players  []string
-	You      string
-	TeamRed  []string
-	TeamBlue []string
+	ID          string
+	Status      string
+	Players     []string
+	You         string
+	TeamRed     []string
+	TeamBlue    []string
+	TeamRedSpy  string
+	TeamBlueSpy string
+	Cards       map[string]db.Card
 }
 
 func mapGameToSpectatorGame(game *db.Game, playerID string) (*spectatorGame, error) {
 	if _, ok := game.Players[playerID]; !ok {
 		return nil, errors.New("Provided game and playerID do not match")
 	}
-	log.Println(game.Players)
+	_, belongsToTeamRed := game.TeamRed[playerID]
+	_, belongsToTeamBlue := game.TeamBlue[playerID]
+	if game.Status == "running" && !belongsToTeamRed && !belongsToTeamBlue {
+		return nil, errors.New("PlayerID doesn't belong to game")
+	}
 	sg := &spectatorGame{
-		ID:       game.ID,
-		Status:   game.Status,
-		Players:  make([]string, 0, len(game.Players)),
-		You:      game.Players[playerID],
-		TeamRed:  make([]string, 0, len(game.TeamRed)),
-		TeamBlue: make([]string, 0, len(game.TeamBlue))}
+		ID:          game.ID,
+		Status:      game.Status,
+		Players:     make([]string, 0, len(game.Players)),
+		You:         game.Players[playerID],
+		TeamRed:     make([]string, 0, len(game.TeamRed)),
+		TeamBlue:    make([]string, 0, len(game.TeamBlue)),
+		TeamRedSpy:  game.TeamRedSpy,
+		TeamBlueSpy: game.TeamBlueSpy,
+		Cards:       game.Cards}
 	for _, playerName := range game.Players {
 		sg.Players = append(sg.Players, playerName)
 	}
@@ -96,19 +107,27 @@ func (c *Client) Listen() {
 					log.Println("Starting Game", c.GameID)
 					teamRed := map[string]string{}
 					teamBlue := map[string]string{}
+					teamRedIDs := make([]string, 0)
+					teamBlueIDs := make([]string, 0)
 					i := 0
 					for playerID, playerName := range game.Players {
 						if i%2 == 0 {
 							teamRed[playerID] = playerName
+							teamRedIDs = append(teamRedIDs, playerID)
 						} else {
 							teamBlue[playerID] = playerName
+							teamBlueIDs = append(teamBlueIDs, playerID)
 						}
 						i++
 					}
+					teamRedSpyID := teamRedIDs[rand.Intn(len(teamRedIDs))]
+					teamBlueSpyID := teamBlueIDs[rand.Intn(len(teamBlueIDs))]
 					db.UpdateGame(ctx, c.Hub.fireStoreClient, c.GameID, map[string]interface{}{
-						"status":   "running",
-						"teamRed":  teamRed,
-						"teamBlue": teamBlue,
+						"status":      "running",
+						"teamRed":     teamRed,
+						"teamBlue":    teamBlue,
+						"teamRedSpy":  teamRed[teamRedSpyID],
+						"teamBlueSpy": teamBlue[teamBlueSpyID],
 					})
 				}
 			}

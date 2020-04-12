@@ -11,14 +11,23 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// Card represents metadata about a word on the board.
+type Card struct {
+	BelongsTo string `firestore:"belongsTo"`
+	Guessed   bool   `firestore:"guessed"`
+}
+
 // Game represents a game.
 type Game struct {
-	ID        string            `firestore:"id"`
-	Status    string            `firestore:"status"`
-	Players   map[string]string `firestore:"players"`
-	CreatorID string            `firestore:"creatorID"`
-	TeamRed   map[string]string `firestore:"teamRed"`
-	TeamBlue  map[string]string `firestore:"teamBlue"`
+	ID          string            `firestore:"id"`
+	Status      string            `firestore:"status"`
+	Players     map[string]string `firestore:"players"`
+	CreatorID   string            `firestore:"creatorID"`
+	TeamRed     map[string]string `firestore:"teamRed"`
+	TeamBlue    map[string]string `firestore:"teamBlue"`
+	TeamRedSpy  string            `firestore:"teamRedSpy"`
+	TeamBlueSpy string            `firestore:"teamBlueSpy"`
+	Cards       map[string]Card   `firestore:"cards"`
 }
 
 // UpdateGame Updates a game
