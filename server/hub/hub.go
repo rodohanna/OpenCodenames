@@ -6,7 +6,9 @@ import (
 	"log"
 	"math/rand"
 
+	"../data"
 	"../db"
+	"../utils"
 	"cloud.google.com/go/firestore"
 	"github.com/gorilla/websocket"
 )
@@ -72,14 +74,7 @@ func mapGameToSpectatorGame(game *db.Game, playerID string) (*spectatorGame, err
 		TeamBlue:    make([]string, 0, len(game.TeamBlue)),
 		TeamRedSpy:  game.TeamRedSpy,
 		TeamBlueSpy: game.TeamBlueSpy,
-		Cards: map[string]db.Card{
-			"Tokyo":   db.Card{BelongsTo: "blue", Guessed: false},
-			"Peanut":  db.Card{BelongsTo: "red", Guessed: false},
-			"Sock":    db.Card{BelongsTo: "red", Guessed: false},
-			"Dog":     db.Card{BelongsTo: "red", Guessed: false},
-			"Picture": db.Card{BelongsTo: "red", Guessed: false},
-			"Persona": db.Card{BelongsTo: "blue", Guessed: false},
-		}}
+		Cards:       game.Cards}
 	for _, playerName := range game.Players {
 		sg.Players = append(sg.Players, playerName)
 	}
@@ -129,12 +124,31 @@ func (c *Client) Listen() {
 					}
 					teamRedSpyID := teamRedIDs[rand.Intn(len(teamRedIDs))]
 					teamBlueSpyID := teamBlueIDs[rand.Intn(len(teamBlueIDs))]
+					wordList := data.GetWordList()
+					chosenWords := make([]string, 0, 25)
+					for {
+						randomWord := wordList[rand.Intn(len(wordList))]
+						if _, contains := utils.Contains(chosenWords, randomWord); contains {
+							continue
+						}
+						chosenWords = append(chosenWords, randomWord)
+						if len(chosenWords) == 25 {
+							break
+						}
+					}
+					cards := map[string]db.Card{}
+					i = 0
+					for _, word := range chosenWords {
+						cards[word] = db.Card{BelongsTo: "", Guessed: false, Index: i}
+						i++
+					}
 					db.UpdateGame(ctx, c.Hub.fireStoreClient, c.GameID, map[string]interface{}{
 						"status":      "running",
 						"teamRed":     teamRed,
 						"teamBlue":    teamBlue,
 						"teamRedSpy":  teamRed[teamRedSpyID],
 						"teamBlueSpy": teamBlue[teamBlueSpyID],
+						"cards":       cards,
 					})
 				}
 			}

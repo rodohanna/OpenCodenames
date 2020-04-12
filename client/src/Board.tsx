@@ -14,14 +14,18 @@ function Board({ game, sendMessage }: BoardProps) {
         {row.map(([cardName]) => {
           return (
             <Grid.Column>
-              <Segment>{cardName}</Segment>
+              <Segment textAlign="center">{cardName}</Segment>
             </Grid.Column>
           );
         })}
       </Grid.Row>
     );
   });
-  return <Grid columns="equal">{gridRows}</Grid>;
+  return (
+    <Grid container stackable columns={5}>
+      {gridRows}
+    </Grid>
+  );
 }
 
 export default Board;

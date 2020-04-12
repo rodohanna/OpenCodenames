@@ -1,10 +1,10 @@
 #root {
   height: 100vh;
-  min-height: 100vh;
+  min-height: 100%;
 }
 .App {
   height: 100vh;
-  min-height: 100vh;
+  min-height: 100%;
   background-color: cornflowerblue;
   padding-top: 2rem;
 }

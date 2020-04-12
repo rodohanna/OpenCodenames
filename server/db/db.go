@@ -13,6 +13,7 @@ import (
 
 // Card represents metadata about a word on the board.
 type Card struct {
+	Index     int    `firestore:"index"`
 	BelongsTo string `firestore:"belongsTo"`
 	Guessed   bool   `firestore:"guessed"`
 }
