@@ -1,5 +1,6 @@
 import React from 'react';
 import Lobby from './Lobby';
+import Board from './Board';
 import useQuery from './hooks/useQuery';
 import useWebSocket from './hooks/useWebSocket';
 import usePlayerID from './hooks/userPlayerID';
@@ -28,7 +29,7 @@ function Game() {
       return <Lobby game={game} sendMessage={sendMessage} />;
     }
     case 'running': {
-      return <div>Game is running: {JSON.stringify(game)}</div>;
+      return <Board game={game} sendMessage={sendMessage} />;
     }
     default: {
       return <div>Unknown Game State {JSON.stringify(game)}</div>;

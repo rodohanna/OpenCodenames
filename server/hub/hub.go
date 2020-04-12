@@ -72,7 +72,14 @@ func mapGameToSpectatorGame(game *db.Game, playerID string) (*spectatorGame, err
 		TeamBlue:    make([]string, 0, len(game.TeamBlue)),
 		TeamRedSpy:  game.TeamRedSpy,
 		TeamBlueSpy: game.TeamBlueSpy,
-		Cards:       game.Cards}
+		Cards: map[string]db.Card{
+			"Tokyo":   db.Card{BelongsTo: "blue", Guessed: false},
+			"Peanut":  db.Card{BelongsTo: "red", Guessed: false},
+			"Sock":    db.Card{BelongsTo: "red", Guessed: false},
+			"Dog":     db.Card{BelongsTo: "red", Guessed: false},
+			"Picture": db.Card{BelongsTo: "red", Guessed: false},
+			"Persona": db.Card{BelongsTo: "blue", Guessed: false},
+		}}
 	for _, playerName := range game.Players {
 		sg.Players = append(sg.Players, playerName)
 	}
