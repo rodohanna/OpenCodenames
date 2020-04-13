@@ -65,6 +65,15 @@ func mapGameToSpectatorGame(game *db.Game, playerID string) (*spectatorGame, err
 	if game.Status == "running" && !belongsToTeamRed && !belongsToTeamBlue {
 		return nil, errors.New("PlayerID doesn't belong to game")
 	}
+	returnCards := map[string]db.Card{}
+	for word, card := range game.Cards {
+		returnCard := db.Card{BelongsTo: "", Guessed: card.Guessed}
+		if card.Guessed {
+			returnCard.BelongsTo = card.BelongsTo
+			returnCard.Guessed = true
+		}
+		returnCards[word] = returnCard
+	}
 	sg := &spectatorGame{
 		ID:          game.ID,
 		Status:      game.Status,
@@ -74,7 +83,7 @@ func mapGameToSpectatorGame(game *db.Game, playerID string) (*spectatorGame, err
 		TeamBlue:    make([]string, 0, len(game.TeamBlue)),
 		TeamRedSpy:  game.TeamRedSpy,
 		TeamBlueSpy: game.TeamBlueSpy,
-		Cards:       game.Cards}
+		Cards:       returnCards}
 	for _, playerName := range game.Players {
 		sg.Players = append(sg.Players, playerName)
 	}
@@ -142,6 +151,57 @@ func (c *Client) Listen() {
 						cards[word] = db.Card{BelongsTo: "", Guessed: false, Index: i}
 						i++
 					}
+					teamRedWords := make([]string, 0, 9)
+					teamBlueWords := make([]string, 0, 8)
+					// Select the bomb card
+					blackWord := chosenWords[rand.Intn(len(chosenWords))]
+					if card, ok := cards[blackWord]; ok {
+						cards[blackWord] = db.Card{BelongsTo: "black", Guessed: false, Index: card.Index}
+					}
+					// Select red cards
+					for j := 0; j < 8; j++ {
+						randomWord := ""
+						for {
+							randomWord = chosenWords[rand.Intn(len(chosenWords))]
+							if randomWord == blackWord {
+								continue
+							}
+							if _, contains := utils.Contains(teamRedWords, randomWord); contains {
+								continue
+							}
+							teamRedWords = append(teamRedWords, randomWord)
+							break
+						}
+						if card, ok := cards[randomWord]; ok {
+							cards[randomWord] = db.Card{BelongsTo: "red", Guessed: false, Index: card.Index}
+						} else {
+							log.Println("red not found", randomWord)
+						}
+					}
+					// Select blue cards
+					for j := 0; j < 9; j++ {
+						randomWord := ""
+						for {
+							randomWord = chosenWords[rand.Intn(len(chosenWords))]
+							if randomWord == blackWord {
+								continue
+							}
+							if _, contains := utils.Contains(teamBlueWords, randomWord); contains {
+								continue
+							}
+							if _, contains := utils.Contains(teamRedWords, randomWord); contains {
+								continue
+							}
+							teamBlueWords = append(teamBlueWords, randomWord)
+							break
+						}
+						if card, ok := cards[randomWord]; ok {
+							cards[randomWord] = db.Card{BelongsTo: "blue", Guessed: false, Index: card.Index}
+						} else {
+							log.Println("blue not found", randomWord)
+						}
+					}
+
 					db.UpdateGame(ctx, c.Hub.fireStoreClient, c.GameID, map[string]interface{}{
 						"status":      "running",
 						"teamRed":     teamRed,

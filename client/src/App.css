@@ -42,3 +42,8 @@
     transform: rotate(360deg);
   }
 }
+
+/* fighting semantic-ui styles */
+.ui.stackable.celled.grid > .row > .column.column-override {
+  padding: 6px !important;
+}

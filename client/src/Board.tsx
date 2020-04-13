@@ -14,7 +14,7 @@ function Board({ game, sendMessage }: BoardProps) {
         <Grid.Row>
           {row.map(([cardName]) => {
             return (
-              <Grid.Column>
+              <Grid.Column className="column-override">
                 <Segment textAlign="center" style={{ userSelect: 'none' }}>
                   {cardName.toLocaleUpperCase()}
                 </Segment>
