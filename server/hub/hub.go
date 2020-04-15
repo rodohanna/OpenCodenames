@@ -45,15 +45,18 @@ func NewClient(gameID string, playerID string, hub *Hub, conn *websocket.Conn, s
 }
 
 type spectatorGame struct {
-	ID          string
-	Status      string
-	Players     []string
-	You         string
-	TeamRed     []string
-	TeamBlue    []string
-	TeamRedSpy  string
-	TeamBlueSpy string
-	Cards       map[string]db.Card
+	ID              string
+	Status          string
+	Players         []string
+	You             string
+	TeamRed         []string
+	TeamBlue        []string
+	TeamRedSpy      string
+	TeamBlueSpy     string
+	TeamRedGuesser  string
+	TeamBlueGuesser string
+	WhoseTurn       string
+	Cards           map[string]db.Card
 }
 
 func mapGameToSpectatorGame(game *db.Game, playerID string) (*spectatorGame, error) {
@@ -75,15 +78,18 @@ func mapGameToSpectatorGame(game *db.Game, playerID string) (*spectatorGame, err
 		returnCards[word] = returnCard
 	}
 	sg := &spectatorGame{
-		ID:          game.ID,
-		Status:      game.Status,
-		Players:     make([]string, 0, len(game.Players)),
-		You:         game.Players[playerID],
-		TeamRed:     make([]string, 0, len(game.TeamRed)),
-		TeamBlue:    make([]string, 0, len(game.TeamBlue)),
-		TeamRedSpy:  game.TeamRedSpy,
-		TeamBlueSpy: game.TeamBlueSpy,
-		Cards:       returnCards}
+		ID:              game.ID,
+		Status:          game.Status,
+		Players:         make([]string, 0, len(game.Players)),
+		You:             game.Players[playerID],
+		TeamRed:         make([]string, 0, len(game.TeamRed)),
+		TeamBlue:        make([]string, 0, len(game.TeamBlue)),
+		TeamRedSpy:      game.TeamRedSpy,
+		TeamBlueSpy:     game.TeamBlueSpy,
+		Cards:           returnCards,
+		TeamRedGuesser:  "",
+		TeamBlueGuesser: "",
+		WhoseTurn:       game.WhoseTurn}
 	for _, playerName := range game.Players {
 		sg.Players = append(sg.Players, playerName)
 	}
@@ -92,6 +98,10 @@ func mapGameToSpectatorGame(game *db.Game, playerID string) (*spectatorGame, err
 	}
 	for _, playerName := range game.TeamBlue {
 		sg.TeamBlue = append(sg.TeamBlue, playerName)
+	}
+	if game.Status == "running" {
+		sg.TeamRedGuesser = sg.TeamRed[game.TeamRedGuesserIndex]
+		sg.TeamBlueGuesser = sg.TeamBlue[game.TeamBlueGuesserIndex]
 	}
 	return sg, nil
 }
@@ -133,6 +143,24 @@ func (c *Client) Listen() {
 					}
 					teamRedSpyID := teamRedIDs[rand.Intn(len(teamRedIDs))]
 					teamBlueSpyID := teamBlueIDs[rand.Intn(len(teamBlueIDs))]
+
+					teamRedGuesserIndex := 0
+					for {
+						if teamRedIDs[teamRedGuesserIndex] == teamRedSpyID {
+							teamRedGuesserIndex = (teamRedGuesserIndex + 1) % len(teamRedIDs)
+							continue
+						}
+						break
+					}
+					teamBlueGuesserIndex := 0
+					for {
+						if teamBlueIDs[teamBlueGuesserIndex] == teamBlueSpyID {
+							teamBlueGuesserIndex = (teamBlueGuesserIndex + 1) % len(teamBlueIDs)
+							continue
+						}
+						break
+					}
+
 					wordList := data.GetWordList()
 					chosenWords := make([]string, 0, 25)
 					for {
@@ -203,12 +231,15 @@ func (c *Client) Listen() {
 					}
 
 					db.UpdateGame(ctx, c.Hub.fireStoreClient, c.GameID, map[string]interface{}{
-						"status":      "running",
-						"teamRed":     teamRed,
-						"teamBlue":    teamBlue,
-						"teamRedSpy":  teamRed[teamRedSpyID],
-						"teamBlueSpy": teamBlue[teamBlueSpyID],
-						"cards":       cards,
+						"status":               "running",
+						"teamRed":              teamRed,
+						"teamBlue":             teamBlue,
+						"teamRedSpy":           teamRed[teamRedSpyID],
+						"teamBlueSpy":          teamBlue[teamBlueSpyID],
+						"teamRedGuesserIndex":  teamRedGuesserIndex,
+						"teamBlueGuesserIndex": teamBlueGuesserIndex,
+						"cards":                cards,
+						"whoseTurn":            "blue",
 					})
 				}
 			}

@@ -20,15 +20,18 @@ type Card struct {
 
 // Game represents a game.
 type Game struct {
-	ID          string            `firestore:"id"`
-	Status      string            `firestore:"status"`
-	Players     map[string]string `firestore:"players"`
-	CreatorID   string            `firestore:"creatorID"`
-	TeamRed     map[string]string `firestore:"teamRed"`
-	TeamBlue    map[string]string `firestore:"teamBlue"`
-	TeamRedSpy  string            `firestore:"teamRedSpy"`
-	TeamBlueSpy string            `firestore:"teamBlueSpy"`
-	Cards       map[string]Card   `firestore:"cards"`
+	ID                   string            `firestore:"id"`
+	Status               string            `firestore:"status"`
+	Players              map[string]string `firestore:"players"`
+	CreatorID            string            `firestore:"creatorID"`
+	TeamRed              map[string]string `firestore:"teamRed"`
+	TeamBlue             map[string]string `firestore:"teamBlue"`
+	TeamRedSpy           string            `firestore:"teamRedSpy"`
+	TeamBlueSpy          string            `firestore:"teamBlueSpy"`
+	TeamRedGuesserIndex  int               `firestore:"teamRedGuesserIndex"`
+	TeamBlueGuesserIndex int               `firestore:"teamBlueGuesserIndex"`
+	WhoseTurn            string            `firestore:"whoseTurn"`
+	Cards                map[string]Card   `firestore:"cards"`
 }
 
 // UpdateGame Updates a game
