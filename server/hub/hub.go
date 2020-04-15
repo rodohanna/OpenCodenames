@@ -49,6 +49,7 @@ type spectatorGame struct {
 	Status          string
 	Players         []string
 	You             string
+	YourTurn        bool
 	TeamRed         []string
 	TeamBlue        []string
 	TeamRedSpy      string
@@ -82,6 +83,7 @@ func mapGameToSpectatorGame(game *db.Game, playerID string) (*spectatorGame, err
 		Status:          game.Status,
 		Players:         make([]string, 0, len(game.Players)),
 		You:             game.Players[playerID],
+		YourTurn:        false,
 		TeamRed:         make([]string, 0, len(game.TeamRed)),
 		TeamBlue:        make([]string, 0, len(game.TeamBlue)),
 		TeamRedSpy:      game.TeamRedSpy,
@@ -90,6 +92,11 @@ func mapGameToSpectatorGame(game *db.Game, playerID string) (*spectatorGame, err
 		TeamRedGuesser:  "",
 		TeamBlueGuesser: "",
 		WhoseTurn:       game.WhoseTurn}
+	if _, ok := game.TeamRed[playerID]; ok && game.WhoseTurn == "red" {
+		sg.YourTurn = true
+	} else if _, ok := game.TeamBlue[playerID]; ok && game.WhoseTurn == "blue" {
+		sg.YourTurn = true
+	}
 	for _, playerName := range game.Players {
 		sg.Players = append(sg.Players, playerName)
 	}
