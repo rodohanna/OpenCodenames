@@ -71,7 +71,7 @@ func mapGameToSpectatorGame(game *db.Game, playerID string) (*spectatorGame, err
 	}
 	returnCards := map[string]db.Card{}
 	for word, card := range game.Cards {
-		returnCard := db.Card{BelongsTo: "", Guessed: card.Guessed}
+		returnCard := db.Card{BelongsTo: "", Guessed: card.Guessed, Index: card.Index}
 		if card.Guessed {
 			returnCard.BelongsTo = card.BelongsTo
 			returnCard.Guessed = true
@@ -107,8 +107,8 @@ func mapGameToSpectatorGame(game *db.Game, playerID string) (*spectatorGame, err
 		sg.TeamBlue = append(sg.TeamBlue, playerName)
 	}
 	if game.Status == "running" {
-		sg.TeamRedGuesser = sg.TeamRed[game.TeamRedGuesserIndex]
-		sg.TeamBlueGuesser = sg.TeamBlue[game.TeamBlueGuesserIndex]
+		sg.TeamRedGuesser = game.TeamRedGuesser
+		sg.TeamBlueGuesser = game.TeamBlueGuesser
 	}
 	return sg, nil
 }
@@ -150,19 +150,19 @@ func (c *Client) Listen() {
 					}
 					teamRedSpyID := teamRedIDs[rand.Intn(len(teamRedIDs))]
 					teamBlueSpyID := teamBlueIDs[rand.Intn(len(teamBlueIDs))]
+					teamRedGuesserID := ""
+					teamBlueGuesserID := ""
 
-					teamRedGuesserIndex := 0
 					for {
-						if teamRedIDs[teamRedGuesserIndex] == teamRedSpyID {
-							teamRedGuesserIndex = (teamRedGuesserIndex + 1) % len(teamRedIDs)
+						teamRedGuesserID = teamRedIDs[rand.Intn(len(teamRedIDs))]
+						if teamRedGuesserID == teamRedSpyID {
 							continue
 						}
 						break
 					}
-					teamBlueGuesserIndex := 0
 					for {
-						if teamBlueIDs[teamBlueGuesserIndex] == teamBlueSpyID {
-							teamBlueGuesserIndex = (teamBlueGuesserIndex + 1) % len(teamBlueIDs)
+						teamBlueGuesserID = teamBlueIDs[rand.Intn(len(teamBlueIDs))]
+						if teamBlueGuesserID == teamBlueSpyID {
 							continue
 						}
 						break
@@ -238,15 +238,15 @@ func (c *Client) Listen() {
 					}
 
 					db.UpdateGame(ctx, c.Hub.fireStoreClient, c.GameID, map[string]interface{}{
-						"status":               "running",
-						"teamRed":              teamRed,
-						"teamBlue":             teamBlue,
-						"teamRedSpy":           teamRed[teamRedSpyID],
-						"teamBlueSpy":          teamBlue[teamBlueSpyID],
-						"teamRedGuesserIndex":  teamRedGuesserIndex,
-						"teamBlueGuesserIndex": teamBlueGuesserIndex,
-						"cards":                cards,
-						"whoseTurn":            "blue",
+						"status":          "running",
+						"teamRed":         teamRed,
+						"teamBlue":        teamBlue,
+						"teamRedSpy":      teamRed[teamRedSpyID],
+						"teamBlueSpy":     teamBlue[teamBlueSpyID],
+						"teamRedGuesser":  teamRed[teamRedGuesserID],
+						"teamBlueGuesser": teamBlue[teamBlueGuesserID],
+						"cards":           cards,
+						"whoseTurn":       "blue",
 					})
 				}
 			}

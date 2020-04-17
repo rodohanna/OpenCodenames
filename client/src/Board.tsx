@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid, Segment } from 'semantic-ui-react';
+import { Divider, Container, Grid, Segment, List, Icon, Message } from 'semantic-ui-react';
 import { chunk } from 'lodash';
 
 type BoardProps = {
@@ -9,7 +9,18 @@ type BoardProps = {
 function Board({ game, sendMessage }: BoardProps) {
   console.log(sendMessage);
   const gridRows = React.useMemo(() => {
-    return chunk(Object.entries(game.Cards), 5).map((row) => {
+    return chunk(
+      Object.entries(game.Cards).sort((a, b) => {
+        if (a[1].Index < b[1].Index) {
+          return -1;
+        } else if (a[1].Index > b[1].Index) {
+          return 1;
+        } else {
+          return 0;
+        }
+      }),
+      5,
+    ).map((row) => {
       return (
         <Grid.Row>
           {row.map(([cardName]) => {
@@ -26,9 +37,49 @@ function Board({ game, sendMessage }: BoardProps) {
     });
   }, [game.Cards]);
   return (
-    <Grid stackable columns={5} container celled="internally" style={{ backgroundColor: 'cornflowerblue' }}>
-      {gridRows}
-    </Grid>
+    <Container textAlign="center">
+      <Message size="big" color={game.YourTurn ? 'green' : game.WhoseTurn === 'red' ? 'red' : 'blue'}>
+        {game.YourTurn ? 'Your Turn' : game.WhoseTurn === 'red' ? "Red's Turn" : "Blue's Turn"}
+      </Message>
+      <Segment padded>
+        <Grid columns={2} textAlign="center">
+          <Grid.Row>
+            <Divider vertical fitted as="span">
+              vs
+            </Divider>
+            <Grid.Column padded>
+              <Icon name="chess knight" size="big" color="red" />
+              <List verticalAlign="middle">
+                {game.TeamRed.map((player) => (
+                  <List.Item>
+                    <List.Header>
+                      {player}
+                      {player === game.TeamRedSpy ? ' (spy)' : player === game.TeamRedGuesser ? ' (guesser)' : ''}
+                    </List.Header>
+                  </List.Item>
+                ))}
+              </List>
+            </Grid.Column>
+            <Grid.Column>
+              <Icon name="chess bishop" size="big" color="blue" />
+              <List verticalAlign="middle">
+                {game.TeamBlue.map((player) => (
+                  <List.Item>
+                    <List.Header>
+                      {player}
+                      {player === game.TeamBlueSpy ? ' (spy)' : player === game.TeamBlueGuesser ? ' (guesser)' : ''}
+                    </List.Header>
+                  </List.Item>
+                ))}
+              </List>
+            </Grid.Column>
+          </Grid.Row>
+        </Grid>
+      </Segment>
+      <Grid stackable columns={5} container celled="internally" style={{ backgroundColor: 'cornflowerblue' }}>
+        {gridRows}
+      </Grid>
+    </Container>
   );
 }
 

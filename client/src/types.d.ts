@@ -5,6 +5,7 @@ interface Message {
 type CardData = {
   BelongsTo: string;
   Guessed: boolean;
+  Index: number;
 };
 
 type Game = {
@@ -14,4 +15,10 @@ type Game = {
   TeamRed: string[];
   TeamBlue: string[];
   Cards: { [x: string]: CardData };
+  WhoseTurn: string;
+  YourTurn: string;
+  TeamRedSpy: string;
+  TeamBlueSpy: string;
+  TeamRedGuesser: string;
+  TeamBlueGuesser: string;
 };
