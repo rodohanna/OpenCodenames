@@ -48,6 +48,20 @@ type spectatorGame struct {
 	ID              string
 	Status          string
 	Players         []string
+	TeamRed         []string
+	TeamBlue        []string
+	TeamRedSpy      string
+	TeamBlueSpy     string
+	TeamRedGuesser  string
+	TeamBlueGuesser string
+	WhoseTurn       string
+	Cards           map[string]db.Card
+}
+
+type spyGame struct {
+	ID              string
+	Status          string
+	Players         []string
 	You             string
 	YourTurn        bool
 	TeamRed         []string
@@ -60,7 +74,7 @@ type spectatorGame struct {
 	Cards           map[string]db.Card
 }
 
-func mapGameToSpectatorGame(game *db.Game, playerID string) (*spectatorGame, error) {
+func mapGameToSpyGame(game *db.Game, playerID string) (*spyGame, error) {
 	if _, ok := game.Players[playerID]; !ok {
 		return nil, errors.New("Provided game and playerID do not match")
 	}
@@ -69,6 +83,43 @@ func mapGameToSpectatorGame(game *db.Game, playerID string) (*spectatorGame, err
 	if game.Status == "running" && !belongsToTeamRed && !belongsToTeamBlue {
 		return nil, errors.New("PlayerID doesn't belong to game")
 	}
+	sg := &spyGame{
+		ID:              game.ID,
+		Status:          game.Status,
+		Players:         make([]string, 0, len(game.Players)),
+		You:             game.Players[playerID],
+		YourTurn:        false,
+		TeamRed:         make([]string, 0, len(game.TeamRed)),
+		TeamBlue:        make([]string, 0, len(game.TeamBlue)),
+		TeamRedSpy:      game.TeamRedSpy,
+		TeamBlueSpy:     game.TeamBlueSpy,
+		Cards:           game.Cards,
+		TeamRedGuesser:  "",
+		TeamBlueGuesser: "",
+		WhoseTurn:       game.WhoseTurn,
+	}
+	if _, ok := game.TeamRed[playerID]; ok && game.WhoseTurn == "red" {
+		sg.YourTurn = true
+	} else if _, ok := game.TeamBlue[playerID]; ok && game.WhoseTurn == "blue" {
+		sg.YourTurn = true
+	}
+	for _, playerName := range game.Players {
+		sg.Players = append(sg.Players, playerName)
+	}
+	for _, playerName := range game.TeamRed {
+		sg.TeamRed = append(sg.TeamRed, playerName)
+	}
+	for _, playerName := range game.TeamBlue {
+		sg.TeamBlue = append(sg.TeamBlue, playerName)
+	}
+	if game.Status == "running" {
+		sg.TeamRedGuesser = game.TeamRedGuesser
+		sg.TeamBlueGuesser = game.TeamBlueGuesser
+	}
+	return sg, nil
+}
+
+func mapGameToSpectatorGame(game *db.Game) (*spectatorGame, error) {
 	returnCards := map[string]db.Card{}
 	for word, card := range game.Cards {
 		returnCard := db.Card{BelongsTo: "", Guessed: card.Guessed, Index: card.Index}
@@ -82,8 +133,6 @@ func mapGameToSpectatorGame(game *db.Game, playerID string) (*spectatorGame, err
 		ID:              game.ID,
 		Status:          game.Status,
 		Players:         make([]string, 0, len(game.Players)),
-		You:             game.Players[playerID],
-		YourTurn:        false,
 		TeamRed:         make([]string, 0, len(game.TeamRed)),
 		TeamBlue:        make([]string, 0, len(game.TeamBlue)),
 		TeamRedSpy:      game.TeamRedSpy,
@@ -92,11 +141,6 @@ func mapGameToSpectatorGame(game *db.Game, playerID string) (*spectatorGame, err
 		TeamRedGuesser:  "",
 		TeamBlueGuesser: "",
 		WhoseTurn:       game.WhoseTurn}
-	if _, ok := game.TeamRed[playerID]; ok && game.WhoseTurn == "red" {
-		sg.YourTurn = true
-	} else if _, ok := game.TeamBlue[playerID]; ok && game.WhoseTurn == "blue" {
-		sg.YourTurn = true
-	}
 	for _, playerName := range game.Players {
 		sg.Players = append(sg.Players, playerName)
 	}
@@ -253,11 +297,23 @@ func (c *Client) Listen() {
 			log.Println("recv", message.Action)
 		case game := <-c.send:
 			log.Println("send", game)
-			sg, err := mapGameToSpectatorGame(game, c.PlayerID)
-			if err != nil {
-				log.Println("Game broadcast error", err)
+			if c.SpectatorOnly {
+				sg, err := mapGameToSpectatorGame(game)
+				if err != nil {
+					log.Println("Game broadcast error", err)
+				}
+				c.Conn.WriteJSON(map[string]*spectatorGame{"game": sg})
+			} else {
+				playerName := game.Players[c.PlayerID]
+				if game.TeamRedSpy == playerName || game.TeamBlueSpy == playerName {
+					// TODO: handle spy vs guesser game here
+				}
+				sg, err := mapGameToSpyGame(game, c.PlayerID)
+				if err != nil {
+					log.Println("Game broadcast error", err)
+				}
+				c.Conn.WriteJSON(map[string]*spyGame{"game": sg})
 			}
-			c.Conn.WriteJSON(map[string]*spectatorGame{"game": sg})
 		case <-c.Cancel:
 			log.Println("done")
 			c.Hub.unregister <- c
@@ -350,7 +406,6 @@ func (h *Hub) Run() {
 					log.Println("no more clients, stopping game watcher")
 					close(h.watchers[client.GameID].cancel)
 					delete(h.watchers, client.GameID)
-
 				}
 			}
 		}

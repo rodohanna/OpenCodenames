@@ -47,3 +47,16 @@
 .ui.stackable.celled.grid > .row > .column.column-override {
   padding: 6px !important;
 }
+
+.card-guessed {
+  position: relative;
+}
+
+.card-guessed::before {
+  content: ' ';
+  position: absolute;
+  top: 50%;
+  left: 25%;
+  border-bottom: 2px solid black;
+  width: 50%;
+}

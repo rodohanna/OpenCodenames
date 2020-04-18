@@ -21,4 +21,5 @@ type Game = {
   TeamBlueSpy: string;
   TeamRedGuesser: string;
   TeamBlueGuesser: string;
+  You: string;
 };

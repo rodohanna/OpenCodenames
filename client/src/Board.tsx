@@ -23,11 +23,23 @@ function Board({ game, sendMessage }: BoardProps) {
     ).map((row) => {
       return (
         <Grid.Row>
-          {row.map(([cardName]) => {
+          {row.map(([cardName, cardData]) => {
             return (
               <Grid.Column className="column-override">
-                <Segment textAlign="center" style={{ userSelect: 'none' }}>
-                  {cardName.toLocaleUpperCase()}
+                <Segment
+                  textAlign="center"
+                  style={{
+                    userSelect: 'none',
+                    ...(cardData.Guessed && { opacity: '.75' }),
+                  }}
+                  color={cardData.BelongsTo === 'red' ? 'red' : cardData.BelongsTo === 'blue' ? 'blue' : undefined}
+                  inverted={['red', 'blue', 'black'].includes(cardData.BelongsTo)}
+                >
+                  {cardData.Guessed ? (
+                    <div className="card-guessed">{cardName.toLocaleUpperCase()}</div>
+                  ) : (
+                    cardName.toLocaleUpperCase()
+                  )}
                 </Segment>
               </Grid.Column>
             );
@@ -52,7 +64,7 @@ function Board({ game, sendMessage }: BoardProps) {
               <List verticalAlign="middle">
                 {game.TeamRed.map((player) => (
                   <List.Item>
-                    <List.Header>
+                    <List.Header style={{ color: player === game.You ? 'green' : 'black' }}>
                       {player}
                       {player === game.TeamRedSpy ? ' (spy)' : player === game.TeamRedGuesser ? ' (guesser)' : ''}
                     </List.Header>
@@ -65,7 +77,7 @@ function Board({ game, sendMessage }: BoardProps) {
               <List verticalAlign="middle">
                 {game.TeamBlue.map((player) => (
                   <List.Item>
-                    <List.Header>
+                    <List.Header style={{ color: player === game.You ? 'green' : 'black' }}>
                       {player}
                       {player === game.TeamBlueSpy ? ' (spy)' : player === game.TeamBlueGuesser ? ' (guesser)' : ''}
                     </List.Header>
