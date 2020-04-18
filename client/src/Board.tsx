@@ -27,6 +27,7 @@ function Board({ game, sendMessage }: BoardProps) {
             return (
               <Grid.Column className="column-override">
                 <Segment
+                  className="game-segment"
                   textAlign="center"
                   style={{
                     userSelect: 'none',

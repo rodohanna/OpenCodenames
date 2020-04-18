@@ -48,6 +48,10 @@
   padding: 6px !important;
 }
 
+.ui.segment.game-segment:hover {
+  text-decoration: underline;
+}
+
 .card-guessed {
   position: relative;
 }
