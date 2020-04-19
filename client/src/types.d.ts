@@ -16,10 +16,12 @@ type Game = {
   TeamBlue: string[];
   Cards: { [x: string]: CardData };
   WhoseTurn: string;
-  YourTurn: string;
+  YourTurn: boolean;
   TeamRedSpy: string;
   TeamBlueSpy: string;
   TeamRedGuesser: string;
   TeamBlueGuesser: string;
   You: string;
+  YouOwnGame: boolean;
+  GameCanStart: boolean;
 };

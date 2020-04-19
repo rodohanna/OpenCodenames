@@ -80,6 +80,6 @@ $RECYCLE.BIN/
 chunkynut-key.json
 
 # custom
-static
+static-assets
 
 # End of https://www.gitignore.io/api/go,macos,windows

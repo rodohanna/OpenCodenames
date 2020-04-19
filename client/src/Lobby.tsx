@@ -22,20 +22,27 @@ function Lobby({ game, sendMessage }: LobbyProps) {
           compact
           header="Invite friends!"
           content={
-            <div style={{ textAlign: 'left' }}>
-              <span>
-                Join: <a href={joinLink}>{joinLink}</a>
-              </span>
-              <br />
-              <span>
-                TV: <a href={watchLink}>{watchLink}</a>
-              </span>
-            </div>
+            <>
+              <div style={{ textAlign: 'left' }}>
+                <span>
+                  Join: <a href={joinLink}>{joinLink}</a>
+                </span>
+                <br />
+                <span>
+                  TV: <a href={watchLink}>{watchLink}</a>
+                </span>
+              </div>
+              {game.YouOwnGame && (
+                <>
+                  <br />
+                  <Button onClick={() => sendMessage('StartGame')} color="green" disabled={!game.GameCanStart}>
+                    Start game
+                  </Button>
+                </>
+              )}
+            </>
           }
         />
-      </Container>
-      <Container>
-        <Button onClick={() => sendMessage('StartGame')}>Start game</Button>
       </Container>
       <Container textAlign="justified">
         <Divider />

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Divider, Container, Grid, Segment, List, Icon, Message } from 'semantic-ui-react';
+import { Divider, Container, Grid, Segment, List, Icon, Message, Button } from 'semantic-ui-react';
 import { chunk } from 'lodash';
 
 type BoardProps = {
@@ -31,6 +31,9 @@ function BannerMessage({ game }: BannerMessageProps) {
 }
 function Board({ game, sendMessage }: BoardProps) {
   const gameIsRunning = game.Status === 'running';
+  const playerIsOnTeamRed = game.TeamRed.includes(game.You);
+  const playerIsOnTeamBlue = game.TeamBlue.includes(game.You);
+  const playerIsGuesser = game.TeamRedGuesser === game.You || game.TeamBlueGuesser === game.You;
   const gridRows = React.useMemo(() => {
     return chunk(
       Object.entries(game.Cards).sort((a, b) => {
@@ -43,12 +46,12 @@ function Board({ game, sendMessage }: BoardProps) {
         }
       }),
       5,
-    ).map((row) => {
+    ).map((row, index) => {
       return (
-        <Grid.Row>
+        <Grid.Row key={index}>
           {row.map(([cardName, cardData]) => {
             return (
-              <Grid.Column className="column-override">
+              <Grid.Column key={cardName} className="column-override">
                 <Segment
                   className={gameIsRunning ? 'game-segment' : ''}
                   textAlign="center"
@@ -87,11 +90,11 @@ function Board({ game, sendMessage }: BoardProps) {
             <Divider vertical fitted as="span">
               vs
             </Divider>
-            <Grid.Column padded>
+            <Grid.Column padded="true">
               <Icon name="chess knight" size="big" color="red" />
               <List verticalAlign="middle">
                 {game.TeamRed.sort().map((player) => (
-                  <List.Item>
+                  <List.Item key={player}>
                     <List.Header style={{ color: player === game.You ? 'green' : 'black' }}>
                       {player}
                       {player === game.TeamRedSpy ? ' (spy)' : player === game.TeamRedGuesser ? ' (guesser)' : ''}
@@ -99,12 +102,17 @@ function Board({ game, sendMessage }: BoardProps) {
                   </List.Item>
                 ))}
               </List>
+              {playerIsOnTeamRed && playerIsGuesser && (
+                <Button color="red" disabled={!game.YourTurn} onClick={() => sendMessage('EndTurn')}>
+                  End Turn
+                </Button>
+              )}
             </Grid.Column>
             <Grid.Column>
               <Icon name="chess bishop" size="big" color="blue" />
               <List verticalAlign="middle">
                 {game.TeamBlue.sort().map((player) => (
-                  <List.Item>
+                  <List.Item key={player}>
                     <List.Header style={{ color: player === game.You ? 'green' : 'black' }}>
                       {player}
                       {player === game.TeamBlueSpy ? ' (spy)' : player === game.TeamBlueGuesser ? ' (guesser)' : ''}
@@ -112,6 +120,11 @@ function Board({ game, sendMessage }: BoardProps) {
                   </List.Item>
                 ))}
               </List>
+              {playerIsOnTeamBlue && playerIsGuesser && (
+                <Button color="red" disabled={!game.YourTurn} onClick={() => sendMessage('EndTurn')}>
+                  End Turn
+                </Button>
+              )}
             </Grid.Column>
           </Grid.Row>
         </Grid>

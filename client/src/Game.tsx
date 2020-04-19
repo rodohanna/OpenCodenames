@@ -7,16 +7,16 @@ import usePlayerID from './hooks/userPlayerID';
 
 function Game() {
   const query = useQuery();
-  const spectate = query.has('spectate');
+  const isSpectator = query.has('spectate');
   const gameID = query.get('gameID');
-  // const isSpectator = query.has('spectate');
   const [game, setGame] = React.useState<Game | null>(null);
   const playerID = usePlayerID();
+  const webSocketHost = window.location.host.includes('localhost') ? 'localhost:8080' : window.location.host;
   const [connected, incomingMessage, sendMessage] = useWebSocket({
-    webSocketUrl: spectate
-      ? `ws://${window.location.host}/ws/spectate?gameID=${gameID}`
-      : `ws://${window.location.host}/ws?gameID=${gameID}&playerID=${playerID}`,
-    skip: typeof gameID !== 'string' && !spectate && playerID !== null,
+    webSocketUrl: isSpectator
+      ? `ws://${webSocketHost}/ws/spectate?gameID=${gameID}`
+      : `ws://${webSocketHost}/ws?gameID=${gameID}&playerID=${playerID}`,
+    skip: typeof gameID !== 'string' && !isSpectator && playerID !== null,
   });
   React.useEffect(() => {
     setGame(incomingMessage);

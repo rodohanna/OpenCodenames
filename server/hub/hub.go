@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"strings"
 
+	"../config"
 	"../data"
 	"../db"
 	"../utils"
@@ -65,6 +66,8 @@ type spyGame struct {
 	Players         []string
 	You             string
 	YourTurn        bool
+	YouOwnGame      bool
+	GameCanStart    bool
 	TeamRed         []string
 	TeamBlue        []string
 	TeamRedSpy      string
@@ -80,7 +83,9 @@ type guesserGame struct {
 	Status          string
 	Players         []string
 	You             string
+	YouOwnGame      bool
 	YourTurn        bool
+	GameCanStart    bool
 	TeamRed         []string
 	TeamBlue        []string
 	TeamRedSpy      string
@@ -115,6 +120,8 @@ func mapyGameToGuesserGame(game *db.Game, playerID string) (*guesserGame, error)
 		Players:         make([]string, 0, len(game.Players)),
 		You:             game.Players[playerID],
 		YourTurn:        false,
+		YouOwnGame:      game.CreatorID == playerID,
+		GameCanStart:    len(game.Players) >= 4 && len(game.Players) <= config.PlayerLimit(),
 		TeamRed:         make([]string, 0, len(game.TeamRed)),
 		TeamBlue:        make([]string, 0, len(game.TeamBlue)),
 		TeamRedSpy:      game.TeamRedSpy,
@@ -160,6 +167,8 @@ func mapGameToSpyGame(game *db.Game, playerID string) (*spyGame, error) {
 		Players:         make([]string, 0, len(game.Players)),
 		You:             game.Players[playerID],
 		YourTurn:        false,
+		YouOwnGame:      game.CreatorID == playerID,
+		GameCanStart:    len(game.Players) >= 4 && len(game.Players) <= config.PlayerLimit(),
 		TeamRed:         make([]string, 0, len(game.TeamRed)),
 		TeamBlue:        make([]string, 0, len(game.TeamBlue)),
 		TeamRedSpy:      game.TeamRedSpy,
@@ -245,6 +254,16 @@ func playerGuessedCardCorrectly(game *db.Game, card *db.Card, playerID string) b
 	_, playerOnTeamRed := game.TeamRed[playerID]
 	_, playerOnTeamBlue := game.TeamBlue[playerID]
 	return (card.BelongsTo == "red" && playerOnTeamRed) || (card.BelongsTo == "blue" && playerOnTeamBlue)
+}
+
+func playerCanEndTurn(game *db.Game, playerID string) bool {
+	if game == nil {
+		return false
+	}
+	playerNameRed, playerOnTeamRed := game.TeamRed[playerID]
+	playerNameBlue, playerOnTeamBlue := game.TeamBlue[playerID]
+	return (playerOnTeamRed && game.TeamRedGuesser == playerNameRed && game.WhoseTurn == "red") ||
+		(playerOnTeamBlue && game.TeamBlueGuesser == playerNameBlue && game.WhoseTurn == "blue")
 }
 
 // Listen broadcasts game changes and handles client actions
@@ -423,7 +442,19 @@ func (c *Client) Listen() {
 						})
 					}
 				}
-
+			case message.Action == "EndTurn":
+				game := c.Hub.games[c.GameID]
+				if playerCanEndTurn(game, c.PlayerID) {
+					whoseTurn := game.WhoseTurn
+					if game.WhoseTurn == "red" {
+						whoseTurn = "blue"
+					} else {
+						whoseTurn = "red"
+					}
+					db.UpdateGame(ctx, c.Hub.fireStoreClient, c.GameID, map[string]interface{}{
+						"whoseTurn": whoseTurn,
+					})
+				}
 			}
 			log.Println("recv", message.Action)
 		case game := <-c.send:
