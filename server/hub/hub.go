@@ -277,7 +277,6 @@ func (c *Client) Listen() {
 					teamBlueSpyID := teamBlueIDs[rand.Intn(len(teamBlueIDs))]
 					teamRedGuesserID := ""
 					teamBlueGuesserID := ""
-
 					for {
 						teamRedGuesserID = teamRedIDs[rand.Intn(len(teamRedIDs))]
 						if teamRedGuesserID == teamRedSpyID {
@@ -384,9 +383,6 @@ func (c *Client) Listen() {
 				if playerCanGuess(game, c.PlayerID) {
 					card, cardFound := game.Cards[word]
 					if cardFound && !card.Guessed {
-						if card.BelongsTo == "black" {
-							// TODO: handle instant game end
-						}
 						newCards := map[string]db.Card{}
 						for key, card := range game.Cards {
 							newCards[key] = card
@@ -395,9 +391,26 @@ func (c *Client) Listen() {
 							Index:     card.Index,
 							BelongsTo: card.BelongsTo,
 							Guessed:   true}
-						// TODO: Calculate if game is over
+						status := game.Status
+						whoseTurn := game.WhoseTurn
+						if card.BelongsTo == "black" {
+							whoseTurn = "over"
+							if game.WhoseTurn == "red" {
+								status = "bluewon"
+							} else {
+								status = "redwon"
+							}
+						} else {
+							if game.WhoseTurn == "red" {
+								whoseTurn = "blue"
+							} else {
+								whoseTurn = "red"
+							}
+						}
 						db.UpdateGame(ctx, c.Hub.fireStoreClient, c.GameID, map[string]interface{}{
-							"cards": newCards,
+							"cards":     newCards,
+							"status":    status,
+							"whoseTurn": whoseTurn,
 						})
 					}
 				}

@@ -6,6 +6,29 @@ type BoardProps = {
   game: Game;
   sendMessage: (message: string) => void;
 };
+type BannerMessageProps = {
+  game: Game;
+};
+function BannerMessage({ game }: BannerMessageProps) {
+  if (game.Status === 'redwon') {
+    return (
+      <Message size="big" color={game.TeamRed.includes(game.You) ? 'green' : 'yellow'}>
+        Red Team Won!
+      </Message>
+    );
+  } else if (game.Status === 'bluewon') {
+    return (
+      <Message size="big" color={game.TeamBlue.includes(game.You) ? 'green' : 'yellow'}>
+        Blue Team Won!
+      </Message>
+    );
+  }
+  return (
+    <Message size="big" color={game.YourTurn ? 'green' : game.WhoseTurn === 'red' ? 'red' : 'blue'}>
+      {game.YourTurn ? 'Your Turn' : game.WhoseTurn === 'red' ? "Red's Turn" : "Blue's Turn"}
+    </Message>
+  );
+}
 function Board({ game, sendMessage }: BoardProps) {
   const gridRows = React.useMemo(() => {
     return chunk(
@@ -55,9 +78,7 @@ function Board({ game, sendMessage }: BoardProps) {
   }, [game.Cards, game.TeamBlueGuesser, game.TeamRedGuesser, game.You, game.YourTurn, sendMessage]);
   return (
     <Container textAlign="center">
-      <Message size="big" color={game.YourTurn ? 'green' : game.WhoseTurn === 'red' ? 'red' : 'blue'}>
-        {game.YourTurn ? 'Your Turn' : game.WhoseTurn === 'red' ? "Red's Turn" : "Blue's Turn"}
-      </Message>
+      <BannerMessage game={game} />
       <Segment padded>
         <Grid columns={2} textAlign="center">
           <Grid.Row>

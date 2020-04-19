@@ -28,7 +28,9 @@ function Game() {
     case 'pending': {
       return <Lobby game={game} sendMessage={sendMessage} />;
     }
-    case 'running': {
+    case 'running':
+    case 'redwon':
+    case 'bluewon': {
       return <Board game={game} sendMessage={sendMessage} />;
     }
     default: {
