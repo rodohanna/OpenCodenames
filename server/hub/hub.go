@@ -238,6 +238,15 @@ func playerCanGuess(game *db.Game, playerID string) bool {
 		(playerOnTeamBlue && game.WhoseTurn == "blue" && game.TeamBlueGuesser == bluePlayerName)
 }
 
+func playerGuessedCardCorrectly(game *db.Game, card *db.Card, playerID string) bool {
+	if game == nil || card == nil {
+		return false
+	}
+	_, playerOnTeamRed := game.TeamRed[playerID]
+	_, playerOnTeamBlue := game.TeamBlue[playerID]
+	return (card.BelongsTo == "red" && playerOnTeamRed) || (card.BelongsTo == "blue" && playerOnTeamBlue)
+}
+
 // Listen broadcasts game changes and handles client actions
 func (c *Client) Listen() {
 	ctx := context.Background()
@@ -400,7 +409,7 @@ func (c *Client) Listen() {
 							} else {
 								status = "redwon"
 							}
-						} else {
+						} else if !playerGuessedCardCorrectly(game, &card, c.PlayerID) {
 							if game.WhoseTurn == "red" {
 								whoseTurn = "blue"
 							} else {
