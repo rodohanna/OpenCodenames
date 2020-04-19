@@ -30,6 +30,7 @@ function BannerMessage({ game }: BannerMessageProps) {
   );
 }
 function Board({ game, sendMessage }: BoardProps) {
+  const gameIsRunning = game.Status === 'running';
   const gridRows = React.useMemo(() => {
     return chunk(
       Object.entries(game.Cards).sort((a, b) => {
@@ -49,11 +50,11 @@ function Board({ game, sendMessage }: BoardProps) {
             return (
               <Grid.Column className="column-override">
                 <Segment
-                  className="game-segment"
+                  className={gameIsRunning ? 'game-segment' : ''}
                   textAlign="center"
                   style={{
                     userSelect: 'none',
-                    ...(cardData.Guessed && { opacity: '.75' }),
+                    ...((cardData.Guessed || !gameIsRunning) && { opacity: '.75' }),
                   }}
                   color={cardData.BelongsTo === 'red' ? 'red' : cardData.BelongsTo === 'blue' ? 'blue' : undefined}
                   inverted={['red', 'blue', 'black'].includes(cardData.BelongsTo)}
@@ -62,6 +63,7 @@ function Board({ game, sendMessage }: BoardProps) {
                       sendMessage(`Guess ${cardName}`);
                     }
                   }}
+                  disabled={!gameIsRunning}
                 >
                   {cardData.Guessed ? (
                     <div className="card-guessed">{cardName.toLocaleUpperCase()}</div>
@@ -75,7 +77,7 @@ function Board({ game, sendMessage }: BoardProps) {
         </Grid.Row>
       );
     });
-  }, [game.Cards, game.TeamBlueGuesser, game.TeamRedGuesser, game.You, game.YourTurn, sendMessage]);
+  }, [game.Cards, game.TeamBlueGuesser, game.TeamRedGuesser, game.You, game.YourTurn, sendMessage, gameIsRunning]);
   return (
     <Container textAlign="center">
       <BannerMessage game={game} />

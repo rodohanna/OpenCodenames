@@ -1,8 +1,7 @@
 import React from 'react';
 import './App.css';
 import 'semantic-ui-css/semantic.min.css';
-import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
-// import useWebSocket from './hooks/useWebSocket';
+import { HashRouter as Router, Switch, Route } from 'react-router-dom';
 import Home from './Home';
 import Game from './Game';
 

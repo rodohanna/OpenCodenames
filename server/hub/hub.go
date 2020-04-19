@@ -138,7 +138,7 @@ func mapyGameToGuesserGame(game *db.Game, playerID string) (*guesserGame, error)
 	for _, playerName := range game.TeamBlue {
 		gg.TeamBlue = append(gg.TeamBlue, playerName)
 	}
-	if game.Status == "running" {
+	if game.Status == "running" || game.Status == "redwon" || game.Status == "bluewon" {
 		gg.TeamRedGuesser = game.TeamRedGuesser
 		gg.TeamBlueGuesser = game.TeamBlueGuesser
 	}
@@ -183,7 +183,7 @@ func mapGameToSpyGame(game *db.Game, playerID string) (*spyGame, error) {
 	for _, playerName := range game.TeamBlue {
 		sg.TeamBlue = append(sg.TeamBlue, playerName)
 	}
-	if game.Status == "running" {
+	if game.Status == "running" || game.Status == "redwon" || game.Status == "bluewon" {
 		sg.TeamRedGuesser = game.TeamRedGuesser
 		sg.TeamBlueGuesser = game.TeamBlueGuesser
 	}
@@ -221,7 +221,7 @@ func mapGameToSpectatorGame(game *db.Game) (*spectatorGame, error) {
 	for _, playerName := range game.TeamBlue {
 		sg.TeamBlue = append(sg.TeamBlue, playerName)
 	}
-	if game.Status == "running" {
+	if game.Status == "running" || game.Status == "redwon" || game.Status == "bluewon" {
 		sg.TeamRedGuesser = game.TeamRedGuesser
 		sg.TeamBlueGuesser = game.TeamBlueGuesser
 	}

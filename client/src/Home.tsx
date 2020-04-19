@@ -33,7 +33,7 @@ function Home() {
     skip: !shouldJoinGame || joinGamePlayerName === null || joinGamePlayerName === '' || playerID === null,
   });
   if (createGameResult?.id) {
-    history.push(`/game?gameID=${createGameResult?.id}`);
+    history.push(`/game?gameID=${createGameResult?.id}${!playingOnThisDevice ? '&spectate' : ''}`);
   } else if (createGameError) {
     return <div>Something broke.. Try refreshing the page.</div>;
   }
