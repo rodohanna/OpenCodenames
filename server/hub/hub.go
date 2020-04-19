@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"math/rand"
+	"strings"
 
 	"../data"
 	"../db"
@@ -227,6 +228,16 @@ func mapGameToSpectatorGame(game *db.Game) (*spectatorGame, error) {
 	return sg, nil
 }
 
+func playerCanGuess(game *db.Game, playerID string) bool {
+	if game == nil {
+		return false
+	}
+	redPlayerName, playerOnTeamRed := game.TeamRed[playerID]
+	bluePlayerName, playerOnTeamBlue := game.TeamBlue[playerID]
+	return (playerOnTeamRed && game.WhoseTurn == "red" && game.TeamRedGuesser == redPlayerName) ||
+		(playerOnTeamBlue && game.WhoseTurn == "blue" && game.TeamBlueGuesser == bluePlayerName)
+}
+
 // Listen broadcasts game changes and handles client actions
 func (c *Client) Listen() {
 	ctx := context.Background()
@@ -237,8 +248,8 @@ func (c *Client) Listen() {
 				log.Println("only a specator, limited abilities")
 				continue
 			}
-			switch message.Action {
-			case "StartGame":
+			switch {
+			case message.Action == "StartGame":
 				log.Println("StartGame Handler")
 				game, ok := c.Hub.games[c.GameID]
 				if !ok {
@@ -363,6 +374,34 @@ func (c *Client) Listen() {
 						"whoseTurn":       "blue",
 					})
 				}
+			case strings.Contains(message.Action, "Guess"):
+				actionParts := strings.Split(message.Action, " ")
+				if len(actionParts) != 2 {
+					continue
+				}
+				word := actionParts[1]
+				game := c.Hub.games[c.GameID]
+				if playerCanGuess(game, c.PlayerID) {
+					card, cardFound := game.Cards[word]
+					if cardFound && !card.Guessed {
+						if card.BelongsTo == "black" {
+							// TODO: handle instant game end
+						}
+						newCards := map[string]db.Card{}
+						for key, card := range game.Cards {
+							newCards[key] = card
+						}
+						newCards[word] = db.Card{
+							Index:     card.Index,
+							BelongsTo: card.BelongsTo,
+							Guessed:   true}
+						// TODO: Calculate if game is over
+						db.UpdateGame(ctx, c.Hub.fireStoreClient, c.GameID, map[string]interface{}{
+							"cards": newCards,
+						})
+					}
+				}
+
 			}
 			log.Println("recv", message.Action)
 		case game := <-c.send:

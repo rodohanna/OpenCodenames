@@ -7,7 +7,6 @@ type BoardProps = {
   sendMessage: (message: string) => void;
 };
 function Board({ game, sendMessage }: BoardProps) {
-  console.log(sendMessage);
   const gridRows = React.useMemo(() => {
     return chunk(
       Object.entries(game.Cards).sort((a, b) => {
@@ -35,6 +34,11 @@ function Board({ game, sendMessage }: BoardProps) {
                   }}
                   color={cardData.BelongsTo === 'red' ? 'red' : cardData.BelongsTo === 'blue' ? 'blue' : undefined}
                   inverted={['red', 'blue', 'black'].includes(cardData.BelongsTo)}
+                  onClick={() => {
+                    if ([game.TeamBlueGuesser, game.TeamRedGuesser].includes(game.You) && game.YourTurn) {
+                      sendMessage(`Guess ${cardName}`);
+                    }
+                  }}
                 >
                   {cardData.Guessed ? (
                     <div className="card-guessed">{cardName.toLocaleUpperCase()}</div>
@@ -48,7 +52,7 @@ function Board({ game, sendMessage }: BoardProps) {
         </Grid.Row>
       );
     });
-  }, [game.Cards]);
+  }, [game.Cards, game.TeamBlueGuesser, game.TeamRedGuesser, game.You, game.YourTurn, sendMessage]);
   return (
     <Container textAlign="center">
       <Message size="big" color={game.YourTurn ? 'green' : game.WhoseTurn === 'red' ? 'red' : 'blue'}>
@@ -63,7 +67,7 @@ function Board({ game, sendMessage }: BoardProps) {
             <Grid.Column padded>
               <Icon name="chess knight" size="big" color="red" />
               <List verticalAlign="middle">
-                {game.TeamRed.map((player) => (
+                {game.TeamRed.sort().map((player) => (
                   <List.Item>
                     <List.Header style={{ color: player === game.You ? 'green' : 'black' }}>
                       {player}
@@ -76,7 +80,7 @@ function Board({ game, sendMessage }: BoardProps) {
             <Grid.Column>
               <Icon name="chess bishop" size="big" color="blue" />
               <List verticalAlign="middle">
-                {game.TeamBlue.map((player) => (
+                {game.TeamBlue.sort().map((player) => (
                   <List.Item>
                     <List.Header style={{ color: player === game.You ? 'green' : 'black' }}>
                       {player}
