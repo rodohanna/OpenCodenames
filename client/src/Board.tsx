@@ -2,10 +2,12 @@ import React from 'react';
 import { Divider, Container, Grid, Segment, List, Icon, Message, Button, Loader } from 'semantic-ui-react';
 import { chunk } from 'lodash';
 import { AppColor, AppColorToCSSColor } from './config';
+import { toast } from 'react-toastify';
 
 type BoardProps = {
   game: Game;
   appColor: AppColor;
+  toaster: Toaster;
   sendMessage: (message: string) => void;
   setAppColor: (color: AppColor) => void;
 };
@@ -32,10 +34,12 @@ function BannerMessage({ game }: BannerMessageProps) {
     </Message>
   );
 }
-function Board({ game, sendMessage, appColor, setAppColor }: BoardProps) {
+function Board({ game, sendMessage, appColor, setAppColor, toaster }: BoardProps) {
   const gameIsRunning = game.Status === 'running';
   const playerIsOnTeamRed = game.TeamRed.includes(game.You);
   const playerIsOnTeamBlue = game.TeamBlue.includes(game.You);
+  const isPlayersTurn =
+    (playerIsOnTeamRed && game.WhoseTurn === 'red') || (playerIsOnTeamBlue && game.WhoseTurn === 'blue');
   const playerIsGuesser = game.TeamRedGuesser === game.You || game.TeamBlueGuesser === game.You;
   const [loadingWord, setLoadingWord] = React.useState<string | null>(null);
   React.useEffect(() => {
@@ -47,7 +51,16 @@ function Board({ game, sendMessage, appColor, setAppColor }: BoardProps) {
     } else if (playerIsOnTeamBlue) {
       setAppColor(AppColor.Blue);
     }
-  }, [playerIsOnTeamRed, playerIsOnTeamBlue]);
+  }, [playerIsOnTeamRed, playerIsOnTeamBlue, setAppColor]);
+  React.useEffect(() => {
+    if (isPlayersTurn) {
+      toast.success("It's your team's turn!");
+    } else if (game.WhoseTurn === 'blue') {
+      toaster.blue("It's the Blue team's turn");
+    } else if (game.WhoseTurn === 'red') {
+      toaster.red("It's the Red team's turn");
+    }
+  }, [game.WhoseTurn, isPlayersTurn, toaster]);
   const gridRows = React.useMemo(() => {
     return chunk(
       Object.entries(game.Cards).sort((a, b) => {

@@ -25,3 +25,9 @@ type Game = {
   YouOwnGame: boolean;
   GameCanStart: boolean;
 };
+
+interface Toaster {
+  blue: (message: string) => void;
+  red: (message: string) => void;
+  green: (message: string) => void;
+}

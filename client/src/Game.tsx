@@ -7,9 +7,10 @@ import usePlayerID from './hooks/userPlayerID';
 import { AppColor } from './config';
 type GameProps = {
   appColor: AppColor;
+  toaster: Toaster;
   setAppColor: (color: AppColor) => void;
 };
-function Game({ setAppColor, appColor }: GameProps) {
+function Game({ setAppColor, appColor, toaster }: GameProps) {
   const query = useQuery();
   const isSpectator = query.has('spectate');
   const gameID = query.get('gameID');
@@ -38,7 +39,9 @@ function Game({ setAppColor, appColor }: GameProps) {
     case 'running':
     case 'redwon':
     case 'bluewon': {
-      return <Board game={game} sendMessage={sendMessage} appColor={appColor} setAppColor={setAppColor} />;
+      return (
+        <Board game={game} sendMessage={sendMessage} appColor={appColor} setAppColor={setAppColor} toaster={toaster} />
+      );
     }
     default: {
       return <div>Unknown Game State {JSON.stringify(game)}</div>;
