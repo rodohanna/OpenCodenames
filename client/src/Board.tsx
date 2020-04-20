@@ -2,7 +2,6 @@ import React from 'react';
 import { Divider, Container, Grid, Segment, List, Icon, Message, Button, Loader } from 'semantic-ui-react';
 import { chunk } from 'lodash';
 import { AppColor, AppColorToCSSColor } from './config';
-import { toast } from 'react-toastify';
 
 type BoardProps = {
   game: Game;
@@ -54,13 +53,24 @@ function Board({ game, sendMessage, appColor, setAppColor, toaster }: BoardProps
   }, [playerIsOnTeamRed, playerIsOnTeamBlue, setAppColor]);
   React.useEffect(() => {
     if (isPlayersTurn) {
-      toast.success("It's your team's turn!");
+      toaster.green("🎉 It's your team's turn!");
     } else if (game.WhoseTurn === 'blue') {
-      toaster.blue("It's the Blue team's turn");
+      toaster.blue("👿 It's the Blue team's turn");
     } else if (game.WhoseTurn === 'red') {
-      toaster.red("It's the Red team's turn");
+      toaster.red("👿 It's the Red team's turn");
     }
   }, [game.WhoseTurn, isPlayersTurn, toaster]);
+  React.useEffect(() => {
+    if (game.LastCardGuessed !== '' && game.LastCardGuessedBy !== '') {
+      if (game.LastCardGuessedCorrectly) {
+        toaster.green(`😊 ${game.LastCardGuessedBy} guessed "${game.LastCardGuessed.toLocaleUpperCase()}" correctly`);
+      } else {
+        toaster.yellow(
+          `😞 ${game.LastCardGuessedBy} guessed "${game.LastCardGuessed.toLocaleUpperCase()}" incorrectly`,
+        );
+      }
+    }
+  }, [game.LastCardGuessed, game.LastCardGuessedBy, game.LastCardGuessedCorrectly, toaster]);
   const gridRows = React.useMemo(() => {
     return chunk(
       Object.entries(game.Cards).sort((a, b) => {

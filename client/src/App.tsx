@@ -8,13 +8,13 @@ import Game from './Game';
 import { AppColor, AppColorToCSSColor } from './config';
 import { ToastContainer, toast } from 'react-toastify';
 
-toast.configure({
-  autoClose: 3000,
-});
+toast.configure();
+const autoClose = 3000;
 const toaster: Toaster = {
-  blue: (message: string) => toast.info(message),
-  red: (message: string) => toast.error(message),
-  green: (message: string) => toast.success(message),
+  blue: (message: string) => toast.info(message, { autoClose }),
+  red: (message: string) => toast.error(message, { autoClose }),
+  green: (message: string) => toast.success(message, { autoClose }),
+  yellow: (message: string) => toast.warn(message, { autoClose }),
 };
 function App() {
   const [appColor, setAppColor] = React.useState<AppColor>(AppColor.Blue);

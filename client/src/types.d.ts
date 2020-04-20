@@ -24,10 +24,14 @@ type Game = {
   You: string;
   YouOwnGame: boolean;
   GameCanStart: boolean;
+  LastCardGuessed: string;
+  LastCardGuessedBy: string;
+  LastCardGuessedCorrectly: boolean;
 };
 
 interface Toaster {
   blue: (message: string) => void;
   red: (message: string) => void;
   green: (message: string) => void;
+  yellow: (message: string) => void;
 }

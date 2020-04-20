@@ -37,18 +37,22 @@ func CreateGameHandler(client *firestore.Client) utils.Handler {
 			creatorID = playerID
 		}
 		game := db.Game{
-			ID:              id,
-			Status:          "pending",
-			Players:         playerMap,
-			CreatorID:       creatorID,
-			TeamRed:         teamRed,
-			TeamBlue:        teamBlue,
-			TeamRedSpy:      "",
-			TeamBlueSpy:     "",
-			TeamRedGuesser:  "",
-			TeamBlueGuesser: "",
-			WhoseTurn:       "",
-			Cards:           make(map[string]db.Card)}
+			ID:                       id,
+			Status:                   "pending",
+			Players:                  playerMap,
+			CreatorID:                creatorID,
+			TeamRed:                  teamRed,
+			TeamBlue:                 teamBlue,
+			TeamRedSpy:               "",
+			TeamBlueSpy:              "",
+			TeamRedGuesser:           "",
+			TeamBlueGuesser:          "",
+			WhoseTurn:                "",
+			Cards:                    make(map[string]db.Card),
+			LastCardGuessed:          "",
+			LastCardGuessedBy:        "",
+			LastCardGuessedCorrectly: false,
+		}
 		err = db.CreateGame(ctx, client, &game)
 		if err != nil {
 			fmt.Fprintf(w, "failed to create game %s %s!", r.Method, id)

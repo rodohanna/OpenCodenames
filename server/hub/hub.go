@@ -47,53 +47,62 @@ func NewClient(gameID string, playerID string, hub *Hub, conn *websocket.Conn, s
 }
 
 type spectatorGame struct {
-	ID              string
-	Status          string
-	Players         []string
-	TeamRed         []string
-	TeamBlue        []string
-	TeamRedSpy      string
-	TeamBlueSpy     string
-	TeamRedGuesser  string
-	TeamBlueGuesser string
-	WhoseTurn       string
-	Cards           map[string]db.Card
+	ID                       string
+	Status                   string
+	Players                  []string
+	TeamRed                  []string
+	TeamBlue                 []string
+	TeamRedSpy               string
+	TeamBlueSpy              string
+	TeamRedGuesser           string
+	TeamBlueGuesser          string
+	WhoseTurn                string
+	Cards                    map[string]db.Card
+	LastCardGuessed          string
+	LastCardGuessedBy        string
+	LastCardGuessedCorrectly bool
 }
 
 type spyGame struct {
-	ID              string
-	Status          string
-	Players         []string
-	You             string
-	YourTurn        bool
-	YouOwnGame      bool
-	GameCanStart    bool
-	TeamRed         []string
-	TeamBlue        []string
-	TeamRedSpy      string
-	TeamBlueSpy     string
-	TeamRedGuesser  string
-	TeamBlueGuesser string
-	WhoseTurn       string
-	Cards           map[string]db.Card
+	ID                       string
+	Status                   string
+	Players                  []string
+	You                      string
+	YourTurn                 bool
+	YouOwnGame               bool
+	GameCanStart             bool
+	TeamRed                  []string
+	TeamBlue                 []string
+	TeamRedSpy               string
+	TeamBlueSpy              string
+	TeamRedGuesser           string
+	TeamBlueGuesser          string
+	WhoseTurn                string
+	Cards                    map[string]db.Card
+	LastCardGuessed          string
+	LastCardGuessedBy        string
+	LastCardGuessedCorrectly bool
 }
 
 type guesserGame struct {
-	ID              string
-	Status          string
-	Players         []string
-	You             string
-	YouOwnGame      bool
-	YourTurn        bool
-	GameCanStart    bool
-	TeamRed         []string
-	TeamBlue        []string
-	TeamRedSpy      string
-	TeamBlueSpy     string
-	TeamRedGuesser  string
-	TeamBlueGuesser string
-	WhoseTurn       string
-	Cards           map[string]db.Card
+	ID                       string
+	Status                   string
+	Players                  []string
+	You                      string
+	YouOwnGame               bool
+	YourTurn                 bool
+	GameCanStart             bool
+	TeamRed                  []string
+	TeamBlue                 []string
+	TeamRedSpy               string
+	TeamBlueSpy              string
+	TeamRedGuesser           string
+	TeamBlueGuesser          string
+	WhoseTurn                string
+	Cards                    map[string]db.Card
+	LastCardGuessed          string
+	LastCardGuessedBy        string
+	LastCardGuessedCorrectly bool
 }
 
 func mapyGameToGuesserGame(game *db.Game, playerID string) (*guesserGame, error) {
@@ -115,21 +124,24 @@ func mapyGameToGuesserGame(game *db.Game, playerID string) (*guesserGame, error)
 		returnCards[word] = returnCard
 	}
 	gg := &guesserGame{
-		ID:              game.ID,
-		Status:          game.Status,
-		Players:         make([]string, 0, len(game.Players)),
-		You:             game.Players[playerID],
-		YourTurn:        false,
-		YouOwnGame:      game.CreatorID == playerID,
-		GameCanStart:    len(game.Players) >= 4 && len(game.Players) <= config.PlayerLimit(),
-		TeamRed:         make([]string, 0, len(game.TeamRed)),
-		TeamBlue:        make([]string, 0, len(game.TeamBlue)),
-		TeamRedSpy:      game.TeamRedSpy,
-		TeamBlueSpy:     game.TeamBlueSpy,
-		Cards:           returnCards,
-		TeamRedGuesser:  "",
-		TeamBlueGuesser: "",
-		WhoseTurn:       game.WhoseTurn,
+		ID:                       game.ID,
+		Status:                   game.Status,
+		Players:                  make([]string, 0, len(game.Players)),
+		You:                      game.Players[playerID],
+		YourTurn:                 false,
+		YouOwnGame:               game.CreatorID == playerID,
+		GameCanStart:             len(game.Players) >= 4 && len(game.Players) <= config.PlayerLimit(),
+		TeamRed:                  make([]string, 0, len(game.TeamRed)),
+		TeamBlue:                 make([]string, 0, len(game.TeamBlue)),
+		TeamRedSpy:               game.TeamRedSpy,
+		TeamBlueSpy:              game.TeamBlueSpy,
+		Cards:                    returnCards,
+		TeamRedGuesser:           "",
+		TeamBlueGuesser:          "",
+		WhoseTurn:                game.WhoseTurn,
+		LastCardGuessed:          game.LastCardGuessed,
+		LastCardGuessedBy:        game.LastCardGuessedBy,
+		LastCardGuessedCorrectly: game.LastCardGuessedCorrectly,
 	}
 	if _, ok := game.TeamRed[playerID]; ok && game.WhoseTurn == "red" {
 		gg.YourTurn = true
@@ -162,21 +174,24 @@ func mapGameToSpyGame(game *db.Game, playerID string) (*spyGame, error) {
 		return nil, errors.New("PlayerID doesn't belong to game")
 	}
 	sg := &spyGame{
-		ID:              game.ID,
-		Status:          game.Status,
-		Players:         make([]string, 0, len(game.Players)),
-		You:             game.Players[playerID],
-		YourTurn:        false,
-		YouOwnGame:      game.CreatorID == playerID,
-		GameCanStart:    len(game.Players) >= 4 && len(game.Players) <= config.PlayerLimit(),
-		TeamRed:         make([]string, 0, len(game.TeamRed)),
-		TeamBlue:        make([]string, 0, len(game.TeamBlue)),
-		TeamRedSpy:      game.TeamRedSpy,
-		TeamBlueSpy:     game.TeamBlueSpy,
-		Cards:           game.Cards,
-		TeamRedGuesser:  "",
-		TeamBlueGuesser: "",
-		WhoseTurn:       game.WhoseTurn,
+		ID:                       game.ID,
+		Status:                   game.Status,
+		Players:                  make([]string, 0, len(game.Players)),
+		You:                      game.Players[playerID],
+		YourTurn:                 false,
+		YouOwnGame:               game.CreatorID == playerID,
+		GameCanStart:             len(game.Players) >= 4 && len(game.Players) <= config.PlayerLimit(),
+		TeamRed:                  make([]string, 0, len(game.TeamRed)),
+		TeamBlue:                 make([]string, 0, len(game.TeamBlue)),
+		TeamRedSpy:               game.TeamRedSpy,
+		TeamBlueSpy:              game.TeamBlueSpy,
+		Cards:                    game.Cards,
+		TeamRedGuesser:           "",
+		TeamBlueGuesser:          "",
+		WhoseTurn:                game.WhoseTurn,
+		LastCardGuessed:          game.LastCardGuessed,
+		LastCardGuessedBy:        game.LastCardGuessedBy,
+		LastCardGuessedCorrectly: game.LastCardGuessedCorrectly,
 	}
 	if _, ok := game.TeamRed[playerID]; ok && game.WhoseTurn == "red" {
 		sg.YourTurn = true
@@ -210,17 +225,21 @@ func mapGameToSpectatorGame(game *db.Game) (*spectatorGame, error) {
 		returnCards[word] = returnCard
 	}
 	sg := &spectatorGame{
-		ID:              game.ID,
-		Status:          game.Status,
-		Players:         make([]string, 0, len(game.Players)),
-		TeamRed:         make([]string, 0, len(game.TeamRed)),
-		TeamBlue:        make([]string, 0, len(game.TeamBlue)),
-		TeamRedSpy:      game.TeamRedSpy,
-		TeamBlueSpy:     game.TeamBlueSpy,
-		Cards:           returnCards,
-		TeamRedGuesser:  "",
-		TeamBlueGuesser: "",
-		WhoseTurn:       game.WhoseTurn}
+		ID:                       game.ID,
+		Status:                   game.Status,
+		Players:                  make([]string, 0, len(game.Players)),
+		TeamRed:                  make([]string, 0, len(game.TeamRed)),
+		TeamBlue:                 make([]string, 0, len(game.TeamBlue)),
+		TeamRedSpy:               game.TeamRedSpy,
+		TeamBlueSpy:              game.TeamBlueSpy,
+		Cards:                    returnCards,
+		TeamRedGuesser:           "",
+		TeamBlueGuesser:          "",
+		WhoseTurn:                game.WhoseTurn,
+		LastCardGuessed:          game.LastCardGuessed,
+		LastCardGuessedBy:        game.LastCardGuessedBy,
+		LastCardGuessedCorrectly: game.LastCardGuessedCorrectly,
+	}
 	for _, playerName := range game.Players {
 		sg.Players = append(sg.Players, playerName)
 	}
@@ -436,9 +455,12 @@ func (c *Client) Listen() {
 							}
 						}
 						db.UpdateGame(ctx, c.Hub.fireStoreClient, c.GameID, map[string]interface{}{
-							"cards":     newCards,
-							"status":    status,
-							"whoseTurn": whoseTurn,
+							"cards":                    newCards,
+							"status":                   status,
+							"whoseTurn":                whoseTurn,
+							"lastCardGuessed":          word,
+							"lastCardGuessedBy":        game.Players[c.PlayerID],
+							"lastCardGuessedCorrectly": card.BelongsTo == game.WhoseTurn,
 						})
 					}
 				}
