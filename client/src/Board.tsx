@@ -1,10 +1,13 @@
 import React from 'react';
-import { Divider, Container, Grid, Segment, List, Icon, Message, Button } from 'semantic-ui-react';
+import { Divider, Container, Grid, Segment, List, Icon, Message, Button, Loader } from 'semantic-ui-react';
 import { chunk } from 'lodash';
+import { AppColor, AppColorToCSSColor } from './config';
 
 type BoardProps = {
   game: Game;
+  appColor: AppColor;
   sendMessage: (message: string) => void;
+  setAppColor: (color: AppColor) => void;
 };
 type BannerMessageProps = {
   game: Game;
@@ -29,11 +32,22 @@ function BannerMessage({ game }: BannerMessageProps) {
     </Message>
   );
 }
-function Board({ game, sendMessage }: BoardProps) {
+function Board({ game, sendMessage, appColor, setAppColor }: BoardProps) {
   const gameIsRunning = game.Status === 'running';
   const playerIsOnTeamRed = game.TeamRed.includes(game.You);
   const playerIsOnTeamBlue = game.TeamBlue.includes(game.You);
   const playerIsGuesser = game.TeamRedGuesser === game.You || game.TeamBlueGuesser === game.You;
+  const [loadingWord, setLoadingWord] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    setLoadingWord(null);
+  }, [game.Cards]);
+  React.useEffect(() => {
+    if (playerIsOnTeamRed) {
+      setAppColor(AppColor.Red);
+    } else if (playerIsOnTeamBlue) {
+      setAppColor(AppColor.Blue);
+    }
+  }, [playerIsOnTeamRed, playerIsOnTeamBlue]);
   const gridRows = React.useMemo(() => {
     return chunk(
       Object.entries(game.Cards).sort((a, b) => {
@@ -64,11 +78,14 @@ function Board({ game, sendMessage }: BoardProps) {
                   onClick={() => {
                     if ([game.TeamBlueGuesser, game.TeamRedGuesser].includes(game.You) && game.YourTurn) {
                       sendMessage(`Guess ${cardName}`);
+                      setLoadingWord(cardName);
                     }
                   }}
                   disabled={!gameIsRunning}
                 >
-                  {cardData.Guessed ? (
+                  {cardName === loadingWord ? (
+                    <Loader active inline size="tiny" />
+                  ) : cardData.Guessed ? (
                     <div className="card-guessed">{cardName.toLocaleUpperCase()}</div>
                   ) : (
                     cardName.toLocaleUpperCase()
@@ -80,7 +97,16 @@ function Board({ game, sendMessage }: BoardProps) {
         </Grid.Row>
       );
     });
-  }, [game.Cards, game.TeamBlueGuesser, game.TeamRedGuesser, game.You, game.YourTurn, sendMessage, gameIsRunning]);
+  }, [
+    game.Cards,
+    game.TeamBlueGuesser,
+    game.TeamRedGuesser,
+    game.You,
+    game.YourTurn,
+    sendMessage,
+    gameIsRunning,
+    loadingWord,
+  ]);
   return (
     <Container textAlign="center">
       <BannerMessage game={game} />
@@ -129,7 +155,13 @@ function Board({ game, sendMessage }: BoardProps) {
           </Grid.Row>
         </Grid>
       </Segment>
-      <Grid stackable columns={5} container celled="internally" style={{ backgroundColor: 'cornflowerblue' }}>
+      <Grid
+        stackable
+        columns={5}
+        container
+        celled="internally"
+        style={{ backgroundColor: AppColorToCSSColor[appColor] }}
+      >
         {gridRows}
       </Grid>
     </Container>

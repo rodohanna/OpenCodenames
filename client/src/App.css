@@ -3,9 +3,8 @@
   min-height: 100%;
 }
 .App {
-  height: 100vh;
+  height: max-content;
   min-height: 100%;
-  background-color: cornflowerblue;
   padding-top: 2rem;
 }
 .App-logo {

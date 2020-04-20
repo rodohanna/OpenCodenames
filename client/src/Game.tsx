@@ -4,8 +4,12 @@ import Board from './Board';
 import useQuery from './hooks/useQuery';
 import useWebSocket from './hooks/useWebSocket';
 import usePlayerID from './hooks/userPlayerID';
-
-function Game() {
+import { AppColor } from './config';
+type GameProps = {
+  appColor: AppColor;
+  setAppColor: (color: AppColor) => void;
+};
+function Game({ setAppColor, appColor }: GameProps) {
   const query = useQuery();
   const isSpectator = query.has('spectate');
   const gameID = query.get('gameID');
@@ -34,7 +38,7 @@ function Game() {
     case 'running':
     case 'redwon':
     case 'bluewon': {
-      return <Board game={game} sendMessage={sendMessage} />;
+      return <Board game={game} sendMessage={sendMessage} appColor={appColor} setAppColor={setAppColor} />;
     }
     default: {
       return <div>Unknown Game State {JSON.stringify(game)}</div>;

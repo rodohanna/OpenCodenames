@@ -1,5 +1,18 @@
 import React from 'react';
-import { Container, Divider, Button, Form, Grid, Segment, Header, Icon, Checkbox, Popup } from 'semantic-ui-react';
+import {
+  Container,
+  Divider,
+  Button,
+  Form,
+  Grid,
+  Segment,
+  Header,
+  Icon,
+  Checkbox,
+  Popup,
+  Loader,
+  Dimmer,
+} from 'semantic-ui-react';
 import { useHistory } from 'react-router-dom';
 import useAPI from './hooks/useAPI';
 import useQuery from './hooks/useQuery';
@@ -104,6 +117,9 @@ function Home() {
                     setShouldJoinGame(true);
                   }}
                 />
+                <Dimmer active={joinGameLoading}>
+                  <Loader size="large">Loading</Loader>
+                </Dimmer>
               </Form>
             </Grid.Column>
             {!gameIDInParams && (
@@ -153,6 +169,9 @@ function Home() {
                         setShouldCreateGame(true);
                       }}
                     />
+                    <Dimmer active={createGameLoading}>
+                      <Loader size="large">Loading</Loader>
+                    </Dimmer>
                   </Form>
                 </Grid.Column>
               </>
