@@ -32,7 +32,7 @@ function Game({ setAppColor, appColor, toaster }: GameProps) {
   if (game === null || !connected) {
     return <div>Loading</div>;
   }
-  switch (game?.Status) {
+  switch (game?.BaseGame?.Status) {
     case 'pending': {
       return <Lobby game={game} sendMessage={sendMessage} />;
     }

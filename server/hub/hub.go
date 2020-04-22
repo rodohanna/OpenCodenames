@@ -2,15 +2,11 @@ package hub
 
 import (
 	"context"
-	"errors"
 	"log"
-	"math/rand"
 	"strings"
 
-	"../config"
-	"../data"
 	"../db"
-	"../utils"
+	g "../game"
 	"cloud.google.com/go/firestore"
 	"github.com/gorilla/websocket"
 )
@@ -46,245 +42,6 @@ func NewClient(gameID string, playerID string, hub *Hub, conn *websocket.Conn, s
 	}
 }
 
-type spectatorGame struct {
-	ID                       string
-	Status                   string
-	Players                  []string
-	TeamRed                  []string
-	TeamBlue                 []string
-	TeamRedSpy               string
-	TeamBlueSpy              string
-	TeamRedGuesser           string
-	TeamBlueGuesser          string
-	WhoseTurn                string
-	Cards                    map[string]db.Card
-	LastCardGuessed          string
-	LastCardGuessedBy        string
-	LastCardGuessedCorrectly bool
-}
-
-type spyGame struct {
-	ID                       string
-	Status                   string
-	Players                  []string
-	You                      string
-	YourTurn                 bool
-	YouOwnGame               bool
-	GameCanStart             bool
-	TeamRed                  []string
-	TeamBlue                 []string
-	TeamRedSpy               string
-	TeamBlueSpy              string
-	TeamRedGuesser           string
-	TeamBlueGuesser          string
-	WhoseTurn                string
-	Cards                    map[string]db.Card
-	LastCardGuessed          string
-	LastCardGuessedBy        string
-	LastCardGuessedCorrectly bool
-}
-
-type guesserGame struct {
-	ID                       string
-	Status                   string
-	Players                  []string
-	You                      string
-	YouOwnGame               bool
-	YourTurn                 bool
-	GameCanStart             bool
-	TeamRed                  []string
-	TeamBlue                 []string
-	TeamRedSpy               string
-	TeamBlueSpy              string
-	TeamRedGuesser           string
-	TeamBlueGuesser          string
-	WhoseTurn                string
-	Cards                    map[string]db.Card
-	LastCardGuessed          string
-	LastCardGuessedBy        string
-	LastCardGuessedCorrectly bool
-}
-
-func mapyGameToGuesserGame(game *db.Game, playerID string) (*guesserGame, error) {
-	if _, ok := game.Players[playerID]; !ok {
-		return nil, errors.New("Provided game and playerID do not match")
-	}
-	_, belongsToTeamRed := game.TeamRed[playerID]
-	_, belongsToTeamBlue := game.TeamBlue[playerID]
-	if game.Status == "running" && !belongsToTeamRed && !belongsToTeamBlue {
-		return nil, errors.New("PlayerID doesn't belong to game")
-	}
-	returnCards := map[string]db.Card{}
-	for word, card := range game.Cards {
-		returnCard := db.Card{BelongsTo: "", Guessed: card.Guessed, Index: card.Index}
-		if card.Guessed {
-			returnCard.BelongsTo = card.BelongsTo
-			returnCard.Guessed = true
-		}
-		returnCards[word] = returnCard
-	}
-	gg := &guesserGame{
-		ID:                       game.ID,
-		Status:                   game.Status,
-		Players:                  make([]string, 0, len(game.Players)),
-		You:                      game.Players[playerID],
-		YourTurn:                 false,
-		YouOwnGame:               game.CreatorID == playerID,
-		GameCanStart:             len(game.Players) >= 4 && len(game.Players) <= config.PlayerLimit(),
-		TeamRed:                  make([]string, 0, len(game.TeamRed)),
-		TeamBlue:                 make([]string, 0, len(game.TeamBlue)),
-		TeamRedSpy:               game.TeamRedSpy,
-		TeamBlueSpy:              game.TeamBlueSpy,
-		Cards:                    returnCards,
-		TeamRedGuesser:           "",
-		TeamBlueGuesser:          "",
-		WhoseTurn:                game.WhoseTurn,
-		LastCardGuessed:          game.LastCardGuessed,
-		LastCardGuessedBy:        game.LastCardGuessedBy,
-		LastCardGuessedCorrectly: game.LastCardGuessedCorrectly,
-	}
-	if _, ok := game.TeamRed[playerID]; ok && game.WhoseTurn == "red" {
-		gg.YourTurn = true
-	} else if _, ok := game.TeamBlue[playerID]; ok && game.WhoseTurn == "blue" {
-		gg.YourTurn = true
-	}
-	for _, playerName := range game.Players {
-		gg.Players = append(gg.Players, playerName)
-	}
-	for _, playerName := range game.TeamRed {
-		gg.TeamRed = append(gg.TeamRed, playerName)
-	}
-	for _, playerName := range game.TeamBlue {
-		gg.TeamBlue = append(gg.TeamBlue, playerName)
-	}
-	if game.Status == "running" || game.Status == "redwon" || game.Status == "bluewon" {
-		gg.TeamRedGuesser = game.TeamRedGuesser
-		gg.TeamBlueGuesser = game.TeamBlueGuesser
-	}
-	return gg, nil
-}
-
-func mapGameToSpyGame(game *db.Game, playerID string) (*spyGame, error) {
-	if _, ok := game.Players[playerID]; !ok {
-		return nil, errors.New("Provided game and playerID do not match")
-	}
-	_, belongsToTeamRed := game.TeamRed[playerID]
-	_, belongsToTeamBlue := game.TeamBlue[playerID]
-	if game.Status == "running" && !belongsToTeamRed && !belongsToTeamBlue {
-		return nil, errors.New("PlayerID doesn't belong to game")
-	}
-	sg := &spyGame{
-		ID:                       game.ID,
-		Status:                   game.Status,
-		Players:                  make([]string, 0, len(game.Players)),
-		You:                      game.Players[playerID],
-		YourTurn:                 false,
-		YouOwnGame:               game.CreatorID == playerID,
-		GameCanStart:             len(game.Players) >= 4 && len(game.Players) <= config.PlayerLimit(),
-		TeamRed:                  make([]string, 0, len(game.TeamRed)),
-		TeamBlue:                 make([]string, 0, len(game.TeamBlue)),
-		TeamRedSpy:               game.TeamRedSpy,
-		TeamBlueSpy:              game.TeamBlueSpy,
-		Cards:                    game.Cards,
-		TeamRedGuesser:           "",
-		TeamBlueGuesser:          "",
-		WhoseTurn:                game.WhoseTurn,
-		LastCardGuessed:          game.LastCardGuessed,
-		LastCardGuessedBy:        game.LastCardGuessedBy,
-		LastCardGuessedCorrectly: game.LastCardGuessedCorrectly,
-	}
-	if _, ok := game.TeamRed[playerID]; ok && game.WhoseTurn == "red" {
-		sg.YourTurn = true
-	} else if _, ok := game.TeamBlue[playerID]; ok && game.WhoseTurn == "blue" {
-		sg.YourTurn = true
-	}
-	for _, playerName := range game.Players {
-		sg.Players = append(sg.Players, playerName)
-	}
-	for _, playerName := range game.TeamRed {
-		sg.TeamRed = append(sg.TeamRed, playerName)
-	}
-	for _, playerName := range game.TeamBlue {
-		sg.TeamBlue = append(sg.TeamBlue, playerName)
-	}
-	if game.Status == "running" || game.Status == "redwon" || game.Status == "bluewon" {
-		sg.TeamRedGuesser = game.TeamRedGuesser
-		sg.TeamBlueGuesser = game.TeamBlueGuesser
-	}
-	return sg, nil
-}
-
-func mapGameToSpectatorGame(game *db.Game) (*spectatorGame, error) {
-	returnCards := map[string]db.Card{}
-	for word, card := range game.Cards {
-		returnCard := db.Card{BelongsTo: "", Guessed: card.Guessed, Index: card.Index}
-		if card.Guessed {
-			returnCard.BelongsTo = card.BelongsTo
-			returnCard.Guessed = true
-		}
-		returnCards[word] = returnCard
-	}
-	sg := &spectatorGame{
-		ID:                       game.ID,
-		Status:                   game.Status,
-		Players:                  make([]string, 0, len(game.Players)),
-		TeamRed:                  make([]string, 0, len(game.TeamRed)),
-		TeamBlue:                 make([]string, 0, len(game.TeamBlue)),
-		TeamRedSpy:               game.TeamRedSpy,
-		TeamBlueSpy:              game.TeamBlueSpy,
-		Cards:                    returnCards,
-		TeamRedGuesser:           "",
-		TeamBlueGuesser:          "",
-		WhoseTurn:                game.WhoseTurn,
-		LastCardGuessed:          game.LastCardGuessed,
-		LastCardGuessedBy:        game.LastCardGuessedBy,
-		LastCardGuessedCorrectly: game.LastCardGuessedCorrectly,
-	}
-	for _, playerName := range game.Players {
-		sg.Players = append(sg.Players, playerName)
-	}
-	for _, playerName := range game.TeamRed {
-		sg.TeamRed = append(sg.TeamRed, playerName)
-	}
-	for _, playerName := range game.TeamBlue {
-		sg.TeamBlue = append(sg.TeamBlue, playerName)
-	}
-	if game.Status == "running" || game.Status == "redwon" || game.Status == "bluewon" {
-		sg.TeamRedGuesser = game.TeamRedGuesser
-		sg.TeamBlueGuesser = game.TeamBlueGuesser
-	}
-	return sg, nil
-}
-
-func playerCanGuess(game *db.Game, playerID string) bool {
-	if game == nil {
-		return false
-	}
-	redPlayerName, playerOnTeamRed := game.TeamRed[playerID]
-	bluePlayerName, playerOnTeamBlue := game.TeamBlue[playerID]
-	return (playerOnTeamRed && game.WhoseTurn == "red" && game.TeamRedGuesser == redPlayerName) ||
-		(playerOnTeamBlue && game.WhoseTurn == "blue" && game.TeamBlueGuesser == bluePlayerName)
-}
-
-func playerGuessedCardCorrectly(game *db.Game, card *db.Card, playerID string) bool {
-	if game == nil || card == nil {
-		return false
-	}
-	_, playerOnTeamRed := game.TeamRed[playerID]
-	_, playerOnTeamBlue := game.TeamBlue[playerID]
-	return (card.BelongsTo == "red" && playerOnTeamRed) || (card.BelongsTo == "blue" && playerOnTeamBlue)
-}
-
-func playerCanEndTurn(game *db.Game, playerID string) bool {
-	if game == nil {
-		return false
-	}
-	playerNameRed, playerOnTeamRed := game.TeamRed[playerID]
-	playerNameBlue, playerOnTeamBlue := game.TeamBlue[playerID]
-	return (playerOnTeamRed && game.TeamRedGuesser == playerNameRed && game.WhoseTurn == "red") ||
-		(playerOnTeamBlue && game.TeamBlueGuesser == playerNameBlue && game.WhoseTurn == "blue")
-}
-
 // Listen broadcasts game changes and handles client actions
 func (c *Client) Listen() {
 	ctx := context.Background()
@@ -303,204 +60,37 @@ func (c *Client) Listen() {
 					log.Println("Error: could not find client game")
 					continue
 				}
-				if game.Status == "pending" && len(game.Players) >= 4 && game.CreatorID == c.PlayerID {
-					log.Println("Starting Game", c.GameID)
-					teamRed := map[string]string{}
-					teamBlue := map[string]string{}
-					teamRedIDs := make([]string, 0)
-					teamBlueIDs := make([]string, 0)
-					i := 0
-					for playerID, playerName := range game.Players {
-						if i%2 == 0 {
-							teamRed[playerID] = playerName
-							teamRedIDs = append(teamRedIDs, playerID)
-						} else {
-							teamBlue[playerID] = playerName
-							teamBlueIDs = append(teamBlueIDs, playerID)
-						}
-						i++
-					}
-					teamRedSpyID := teamRedIDs[rand.Intn(len(teamRedIDs))]
-					teamBlueSpyID := teamBlueIDs[rand.Intn(len(teamBlueIDs))]
-					teamRedGuesserID := ""
-					teamBlueGuesserID := ""
-					for {
-						teamRedGuesserID = teamRedIDs[rand.Intn(len(teamRedIDs))]
-						if teamRedGuesserID == teamRedSpyID {
-							continue
-						}
-						break
-					}
-					for {
-						teamBlueGuesserID = teamBlueIDs[rand.Intn(len(teamBlueIDs))]
-						if teamBlueGuesserID == teamBlueSpyID {
-							continue
-						}
-						break
-					}
-
-					wordList := data.GetWordList()
-					chosenWords := make([]string, 0, 25)
-					for {
-						randomWord := wordList[rand.Intn(len(wordList))]
-						if _, contains := utils.Contains(chosenWords, randomWord); contains {
-							continue
-						}
-						chosenWords = append(chosenWords, randomWord)
-						if len(chosenWords) == 25 {
-							break
-						}
-					}
-					cards := map[string]db.Card{}
-					i = 0
-					for _, word := range chosenWords {
-						cards[word] = db.Card{BelongsTo: "", Guessed: false, Index: i}
-						i++
-					}
-					teamRedWords := make([]string, 0, 9)
-					teamBlueWords := make([]string, 0, 8)
-					// Select the bomb card
-					blackWord := chosenWords[rand.Intn(len(chosenWords))]
-					if card, ok := cards[blackWord]; ok {
-						cards[blackWord] = db.Card{BelongsTo: "black", Guessed: false, Index: card.Index}
-					}
-					// Select red cards
-					for j := 0; j < 8; j++ {
-						randomWord := ""
-						for {
-							randomWord = chosenWords[rand.Intn(len(chosenWords))]
-							if randomWord == blackWord {
-								continue
-							}
-							if _, contains := utils.Contains(teamRedWords, randomWord); contains {
-								continue
-							}
-							teamRedWords = append(teamRedWords, randomWord)
-							break
-						}
-						if card, ok := cards[randomWord]; ok {
-							cards[randomWord] = db.Card{BelongsTo: "red", Guessed: false, Index: card.Index}
-						} else {
-							log.Println("red not found", randomWord)
-						}
-					}
-					// Select blue cards
-					for j := 0; j < 9; j++ {
-						randomWord := ""
-						for {
-							randomWord = chosenWords[rand.Intn(len(chosenWords))]
-							if randomWord == blackWord {
-								continue
-							}
-							if _, contains := utils.Contains(teamBlueWords, randomWord); contains {
-								continue
-							}
-							if _, contains := utils.Contains(teamRedWords, randomWord); contains {
-								continue
-							}
-							teamBlueWords = append(teamBlueWords, randomWord)
-							break
-						}
-						if card, ok := cards[randomWord]; ok {
-							cards[randomWord] = db.Card{BelongsTo: "blue", Guessed: false, Index: card.Index}
-						} else {
-							log.Println("blue not found", randomWord)
-						}
-					}
-
-					db.UpdateGame(ctx, c.Hub.fireStoreClient, c.GameID, map[string]interface{}{
-						"status":          "running",
-						"teamRed":         teamRed,
-						"teamBlue":        teamBlue,
-						"teamRedSpy":      teamRed[teamRedSpyID],
-						"teamBlueSpy":     teamBlue[teamBlueSpyID],
-						"teamRedGuesser":  teamRed[teamRedGuesserID],
-						"teamBlueGuesser": teamBlue[teamBlueGuesserID],
-						"cards":           cards,
-						"whoseTurn":       "blue",
-					})
-				}
+				g.HandleGameStart(ctx, c.Hub.fireStoreClient, game, c.PlayerID)
 			case strings.Contains(message.Action, "Guess"):
-				actionParts := strings.Split(message.Action, " ")
-				if len(actionParts) != 2 {
-					continue
-				}
-				word := actionParts[1]
 				game := c.Hub.games[c.GameID]
-				if playerCanGuess(game, c.PlayerID) {
-					card, cardFound := game.Cards[word]
-					if cardFound && !card.Guessed {
-						newCards := map[string]db.Card{}
-						for key, card := range game.Cards {
-							newCards[key] = card
-						}
-						newCards[word] = db.Card{
-							Index:     card.Index,
-							BelongsTo: card.BelongsTo,
-							Guessed:   true}
-						status := game.Status
-						whoseTurn := game.WhoseTurn
-						if card.BelongsTo == "black" {
-							whoseTurn = "over"
-							if game.WhoseTurn == "red" {
-								status = "bluewon"
-							} else {
-								status = "redwon"
-							}
-						} else if !playerGuessedCardCorrectly(game, &card, c.PlayerID) {
-							if game.WhoseTurn == "red" {
-								whoseTurn = "blue"
-							} else {
-								whoseTurn = "red"
-							}
-						}
-						db.UpdateGame(ctx, c.Hub.fireStoreClient, c.GameID, map[string]interface{}{
-							"cards":                    newCards,
-							"status":                   status,
-							"whoseTurn":                whoseTurn,
-							"lastCardGuessed":          word,
-							"lastCardGuessedBy":        game.Players[c.PlayerID],
-							"lastCardGuessedCorrectly": card.BelongsTo == game.WhoseTurn,
-						})
-					}
-				}
+				g.HandlePlayerGuess(ctx, c.Hub.fireStoreClient, message.Action, c.PlayerID, game)
 			case message.Action == "EndTurn":
 				game := c.Hub.games[c.GameID]
-				if playerCanEndTurn(game, c.PlayerID) {
-					whoseTurn := game.WhoseTurn
-					if game.WhoseTurn == "red" {
-						whoseTurn = "blue"
-					} else {
-						whoseTurn = "red"
-					}
-					db.UpdateGame(ctx, c.Hub.fireStoreClient, c.GameID, map[string]interface{}{
-						"whoseTurn": whoseTurn,
-					})
-				}
+				g.HandleEndTurn(ctx, c.Hub.fireStoreClient, game, c.PlayerID)
 			}
 			log.Println("recv", message.Action)
 		case game := <-c.send:
 			log.Println("send", game)
 			if c.SpectatorOnly {
-				sg, err := mapGameToSpectatorGame(game)
+				bg, err := g.MapGameToBaseGame(game)
 				if err != nil {
 					log.Println("Game broadcast error", err)
 				}
-				c.Conn.WriteJSON(map[string]*spectatorGame{"game": sg})
+				c.Conn.WriteJSON(map[string]*g.BaseGame{"game": bg})
 			} else {
 				playerName := game.Players[c.PlayerID]
 				if game.TeamRedSpy == playerName || game.TeamBlueSpy == playerName {
-					sg, err := mapGameToSpyGame(game, c.PlayerID)
+					sg, err := g.MapGameToSpyGame(game, c.PlayerID)
 					if err != nil {
 						log.Println("Game broadcast error", err)
 					}
-					c.Conn.WriteJSON(map[string]*spyGame{"game": sg})
+					c.Conn.WriteJSON(map[string]*g.PlayerGame{"game": sg})
 				} else {
-					gg, err := mapyGameToGuesserGame(game, c.PlayerID)
+					gg, err := g.MapGameToGuesserGame(game, c.PlayerID)
 					if err != nil {
 						log.Println("Game broadcast error", err)
 					}
-					c.Conn.WriteJSON(map[string]*guesserGame{"game": gg})
+					c.Conn.WriteJSON(map[string]*g.PlayerGame{"game": gg})
 				}
 			}
 		case <-c.Cancel:

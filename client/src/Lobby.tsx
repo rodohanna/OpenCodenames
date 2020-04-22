@@ -6,8 +6,8 @@ type LobbyProps = {
   sendMessage: (message: string) => void;
 };
 function Lobby({ game, sendMessage }: LobbyProps) {
-  const joinLink = `${window.origin}/#/?gameID=${game.ID}`;
-  const watchLink = `${window.origin}/#/game?gameID=${game.ID}&spectate`;
+  const joinLink = `${window.origin}/#/?gameID=${game.BaseGame.ID}`;
+  const watchLink = `${window.origin}/#/game?gameID=${game.BaseGame.ID}&spectate`;
   return (
     <>
       <Container textAlign="center">
@@ -47,7 +47,7 @@ function Lobby({ game, sendMessage }: LobbyProps) {
       <Container textAlign="justified">
         <Divider />
         <Card.Group centered>
-          {game.Players.sort().map((playerName) => (
+          {game.BaseGame.Players.sort().map((playerName) => (
             <Card color="red" key={playerName}>
               <Card.Content>
                 <Card.Description textAlign="center">

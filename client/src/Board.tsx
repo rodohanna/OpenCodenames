@@ -14,36 +14,97 @@ type BannerMessageProps = {
   game: Game;
 };
 function BannerMessage({ game }: BannerMessageProps) {
-  if (game.Status === 'redwon') {
+  const { You } = game;
+  const _BannerMessage = function (message: string, color: 'green' | 'yellow' | 'red' | 'blue') {
     return (
-      <Message size="big" color={game.TeamRed.includes(game.You) ? 'green' : 'yellow'}>
-        Red Team Won!
+      <Message size="big" color={color}>
+        {message}
       </Message>
     );
-  } else if (game.Status === 'bluewon') {
-    return (
-      <Message size="big" color={game.TeamBlue.includes(game.You) ? 'green' : 'yellow'}>
-        Blue Team Won!
-      </Message>
-    );
+  };
+  const {
+    YourTurn,
+    BaseGame: { Status, TeamRed, TeamBlue, WhoseTurn },
+  } = game;
+  if (Status === 'redwon') {
+    return _BannerMessage('Red Team Won!', TeamRed.includes(You) ? 'green' : 'yellow');
+  } else if (Status === 'bluewon') {
+    return _BannerMessage('Blue Team Won!', TeamBlue.includes(You) ? 'green' : 'yellow');
   }
+  return _BannerMessage(
+    YourTurn ? 'Your Turn' : WhoseTurn === 'red' ? "Red's Turn" : "Blue's Turn",
+    YourTurn ? 'green' : WhoseTurn === 'red' ? 'red' : 'blue',
+  );
+}
+
+function TeamDescription({
+  icon,
+  color,
+  team,
+  you,
+  spy,
+  guesser,
+  yourTurn,
+  sendMessage,
+}: {
+  icon: 'chess knight' | 'chess bishop';
+  color: 'red' | 'blue';
+  team: string[];
+  you: string;
+  spy: string;
+  guesser: string;
+  yourTurn: boolean;
+  sendMessage: (message: string) => void;
+}) {
+  const youAreGuesser = you === guesser;
   return (
-    <Message size="big" color={game.YourTurn ? 'green' : game.WhoseTurn === 'red' ? 'red' : 'blue'}>
-      {game.YourTurn ? 'Your Turn' : game.WhoseTurn === 'red' ? "Red's Turn" : "Blue's Turn"}
-    </Message>
+    <>
+      <Icon name={icon} size="big" color={color} />
+      <List verticalAlign="middle">
+        {team.sort().map((player) => (
+          <List.Item key={player}>
+            <List.Header style={{ color: player === you ? 'green' : 'black' }}>
+              {player}
+              {player === spy ? ' (spy)' : player === guesser ? ' (guesser)' : ''}
+            </List.Header>
+          </List.Item>
+        ))}
+      </List>
+      {youAreGuesser && (
+        <Button color="red" disabled={!yourTurn} onClick={() => sendMessage('EndTurn')}>
+          End Turn
+        </Button>
+      )}
+    </>
   );
 }
 function Board({ game, sendMessage, appColor, setAppColor, toaster }: BoardProps) {
-  const gameIsRunning = game.Status === 'running';
-  const playerIsOnTeamRed = game.TeamRed.includes(game.You);
-  const playerIsOnTeamBlue = game.TeamBlue.includes(game.You);
-  const isPlayersTurn =
-    (playerIsOnTeamRed && game.WhoseTurn === 'red') || (playerIsOnTeamBlue && game.WhoseTurn === 'blue');
-  const playerIsGuesser = game.TeamRedGuesser === game.You || game.TeamBlueGuesser === game.You;
+  const {
+    You,
+    YourTurn,
+    BaseGame: {
+      Cards,
+      Status,
+      TeamRed,
+      TeamBlue,
+      WhoseTurn,
+      TeamBlueGuesser,
+      TeamRedGuesser,
+      LastCardGuessed,
+      LastCardGuessedBy,
+      LastCardGuessedCorrectly,
+      TeamRedSpy,
+      TeamBlueSpy,
+    },
+  } = game;
+  const gameIsRunning = Status === 'running';
+  const playerIsOnTeamRed = TeamRed.includes(You);
+  const playerIsOnTeamBlue = TeamBlue.includes(You);
+  const isPlayersTurn = (playerIsOnTeamRed && WhoseTurn === 'red') || (playerIsOnTeamBlue && WhoseTurn === 'blue');
   const [loadingWord, setLoadingWord] = React.useState<string | null>(null);
   React.useEffect(() => {
     setLoadingWord(null);
-  }, [game.Cards]);
+  }, [Cards]);
   React.useEffect(() => {
     if (playerIsOnTeamRed) {
       setAppColor(AppColor.Red);
@@ -54,26 +115,24 @@ function Board({ game, sendMessage, appColor, setAppColor, toaster }: BoardProps
   React.useEffect(() => {
     if (isPlayersTurn) {
       toaster.green("🎉 It's your team's turn!");
-    } else if (game.WhoseTurn === 'blue') {
+    } else if (WhoseTurn === 'blue') {
       toaster.blue("👿 It's the Blue team's turn");
-    } else if (game.WhoseTurn === 'red') {
+    } else if (WhoseTurn === 'red') {
       toaster.red("👿 It's the Red team's turn");
     }
-  }, [game.WhoseTurn, isPlayersTurn, toaster]);
+  }, [WhoseTurn, isPlayersTurn, toaster]);
   React.useEffect(() => {
-    if (game.LastCardGuessed !== '' && game.LastCardGuessedBy !== '') {
-      if (game.LastCardGuessedCorrectly) {
-        toaster.green(`😊 ${game.LastCardGuessedBy} guessed "${game.LastCardGuessed.toLocaleUpperCase()}" correctly`);
+    if (LastCardGuessed !== '' && LastCardGuessedBy !== '') {
+      if (LastCardGuessedCorrectly) {
+        toaster.green(`😊 ${LastCardGuessedBy} guessed "${LastCardGuessed.toLocaleUpperCase()}" correctly`);
       } else {
-        toaster.yellow(
-          `😞 ${game.LastCardGuessedBy} guessed "${game.LastCardGuessed.toLocaleUpperCase()}" incorrectly`,
-        );
+        toaster.yellow(`😞 ${LastCardGuessedBy} guessed "${LastCardGuessed.toLocaleUpperCase()}" incorrectly`);
       }
     }
-  }, [game.LastCardGuessed, game.LastCardGuessedBy, game.LastCardGuessedCorrectly, toaster]);
+  }, [LastCardGuessed, LastCardGuessedBy, LastCardGuessedCorrectly, toaster]);
   const gridRows = React.useMemo(() => {
     return chunk(
-      Object.entries(game.Cards).sort((a, b) => {
+      Object.entries(Cards).sort((a, b) => {
         if (a[1].Index < b[1].Index) {
           return -1;
         } else if (a[1].Index > b[1].Index) {
@@ -99,7 +158,7 @@ function Board({ game, sendMessage, appColor, setAppColor, toaster }: BoardProps
                   color={cardData.BelongsTo === 'red' ? 'red' : cardData.BelongsTo === 'blue' ? 'blue' : undefined}
                   inverted={['red', 'blue', 'black'].includes(cardData.BelongsTo)}
                   onClick={() => {
-                    if ([game.TeamBlueGuesser, game.TeamRedGuesser].includes(game.You) && game.YourTurn) {
+                    if ([TeamBlueGuesser, TeamRedGuesser].includes(You) && YourTurn) {
                       sendMessage(`Guess ${cardName}`);
                       setLoadingWord(cardName);
                     }
@@ -120,16 +179,7 @@ function Board({ game, sendMessage, appColor, setAppColor, toaster }: BoardProps
         </Grid.Row>
       );
     });
-  }, [
-    game.Cards,
-    game.TeamBlueGuesser,
-    game.TeamRedGuesser,
-    game.You,
-    game.YourTurn,
-    sendMessage,
-    gameIsRunning,
-    loadingWord,
-  ]);
+  }, [Cards, TeamBlueGuesser, TeamRedGuesser, You, YourTurn, sendMessage, gameIsRunning, loadingWord]);
   return (
     <Container textAlign="center">
       <BannerMessage game={game} />
@@ -140,40 +190,28 @@ function Board({ game, sendMessage, appColor, setAppColor, toaster }: BoardProps
               vs
             </Divider>
             <Grid.Column padded="true">
-              <Icon name="chess knight" size="big" color="red" />
-              <List verticalAlign="middle">
-                {game.TeamRed.sort().map((player) => (
-                  <List.Item key={player}>
-                    <List.Header style={{ color: player === game.You ? 'green' : 'black' }}>
-                      {player}
-                      {player === game.TeamRedSpy ? ' (spy)' : player === game.TeamRedGuesser ? ' (guesser)' : ''}
-                    </List.Header>
-                  </List.Item>
-                ))}
-              </List>
-              {playerIsOnTeamRed && playerIsGuesser && (
-                <Button color="red" disabled={!game.YourTurn} onClick={() => sendMessage('EndTurn')}>
-                  End Turn
-                </Button>
-              )}
+              <TeamDescription
+                icon="chess knight"
+                color="red"
+                team={TeamRed}
+                you={You}
+                spy={TeamRedSpy}
+                guesser={TeamRedGuesser}
+                yourTurn={YourTurn}
+                sendMessage={sendMessage}
+              />
             </Grid.Column>
             <Grid.Column>
-              <Icon name="chess bishop" size="big" color="blue" />
-              <List verticalAlign="middle">
-                {game.TeamBlue.sort().map((player) => (
-                  <List.Item key={player}>
-                    <List.Header style={{ color: player === game.You ? 'green' : 'black' }}>
-                      {player}
-                      {player === game.TeamBlueSpy ? ' (spy)' : player === game.TeamBlueGuesser ? ' (guesser)' : ''}
-                    </List.Header>
-                  </List.Item>
-                ))}
-              </List>
-              {playerIsOnTeamBlue && playerIsGuesser && (
-                <Button color="red" disabled={!game.YourTurn} onClick={() => sendMessage('EndTurn')}>
-                  End Turn
-                </Button>
-              )}
+              <TeamDescription
+                icon="chess bishop"
+                color="blue"
+                team={TeamBlue}
+                you={You}
+                spy={TeamBlueSpy}
+                guesser={TeamBlueGuesser}
+                yourTurn={YourTurn}
+                sendMessage={sendMessage}
+              />
             </Grid.Column>
           </Grid.Row>
         </Grid>

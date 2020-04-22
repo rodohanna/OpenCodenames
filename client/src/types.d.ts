@@ -8,25 +8,29 @@ type CardData = {
   Index: number;
 };
 
-type Game = {
+type BaseGame = {
   ID: string;
   Status: string;
   Players: string[];
   TeamRed: string[];
   TeamBlue: string[];
-  Cards: { [x: string]: CardData };
-  WhoseTurn: string;
-  YourTurn: boolean;
   TeamRedSpy: string;
   TeamBlueSpy: string;
   TeamRedGuesser: string;
   TeamBlueGuesser: string;
-  You: string;
-  YouOwnGame: boolean;
-  GameCanStart: boolean;
+  WhoseTurn: string;
   LastCardGuessed: string;
   LastCardGuessedBy: string;
   LastCardGuessedCorrectly: boolean;
+  Cards: { [x: string]: CardData };
+};
+
+type Game = {
+  You: string;
+  YouOwnGame: boolean;
+  YourTurn: boolean;
+  GameCanStart: boolean;
+  BaseGame: BaseGame;
 };
 
 interface Toaster {

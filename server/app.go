@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"./game"
+	"./handlers"
 	"./hub"
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
@@ -45,9 +45,9 @@ func main() {
 	go hub.Run()
 	fs := http.FileServer(http.Dir("./static-assets"))
 	http.Handle("/", fs)
-	http.HandleFunc("/game/create", game.CreateGameHandler(client))
-	http.HandleFunc("/game/join", game.JoinGameHandler(client))
-	http.HandleFunc("/ws", game.PlayerHandler(client, hub))
-	http.HandleFunc("/ws/spectate", game.SpectatorHandler(client, hub))
+	http.HandleFunc("/game/create", handlers.CreateGameHandler(client))
+	http.HandleFunc("/game/join", handlers.JoinGameHandler(client))
+	http.HandleFunc("/ws", handlers.PlayerHandler(client, hub))
+	http.HandleFunc("/ws/spectate", handlers.SpectatorHandler(client, hub))
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
