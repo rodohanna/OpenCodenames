@@ -5,9 +5,9 @@ import (
 	"log"
 	"strings"
 
-	"../db"
-	g "../game"
 	"cloud.google.com/go/firestore"
+	"github.com/RobertDHanna/OpenCodenames/db"
+	g "github.com/RobertDHanna/OpenCodenames/game"
 	"github.com/gorilla/websocket"
 )
 

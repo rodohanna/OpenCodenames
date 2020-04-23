@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"net/url"
 
-	"../db"
-	h "../hub"
-	"../utils"
 	"cloud.google.com/go/firestore"
+	"github.com/RobertDHanna/OpenCodenames/db"
+	h "github.com/RobertDHanna/OpenCodenames/hub"
+	"github.com/RobertDHanna/OpenCodenames/utils"
 	"github.com/gorilla/websocket"
 )
 

@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"time"
 
-	"./handlers"
-	"./hub"
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
+	"github.com/RobertDHanna/OpenCodenames/handlers"
+	"github.com/RobertDHanna/OpenCodenames/hub"
 	"google.golang.org/api/option"
 )
 

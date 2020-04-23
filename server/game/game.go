@@ -7,11 +7,11 @@ import (
 	"math/rand"
 	"strings"
 
-	"../config"
-	"../data"
-	"../db"
-	"../utils"
 	"cloud.google.com/go/firestore"
+	"github.com/RobertDHanna/OpenCodenames/config"
+	"github.com/RobertDHanna/OpenCodenames/data"
+	"github.com/RobertDHanna/OpenCodenames/db"
+	"github.com/RobertDHanna/OpenCodenames/utils"
 )
 
 // BaseGame collection of fields that every participant needs
