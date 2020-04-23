@@ -1,4 +1,3 @@
-cd client
-yarn build
-cd ..
-cp -R client/build/ server/static-assets
+heroku container:push web
+heroku container:release web
+heroku open
