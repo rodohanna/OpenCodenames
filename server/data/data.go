@@ -12,14 +12,15 @@ import (
 type WordList []string
 
 var (
-	once         sync.Once
-	instance     WordList
-	recaptchaKey string
+	wordListOnce     sync.Once
+	recaptchaKeyOnce sync.Once
+	instance         WordList
+	recaptchaKey     string
 )
 
 // GetWordList returns the word list
 func GetWordList() WordList {
-	once.Do(func() {
+	wordListOnce.Do(func() {
 		file, err := os.Open("./data/wordlist.txt")
 		if err != nil {
 			log.Fatal(err)
@@ -40,7 +41,7 @@ func GetWordList() WordList {
 
 // GetReCAPTCHAKey returns the token necessary to check ReCAPTCHA tests
 func GetReCAPTCHAKey() string {
-	once.Do(func() {
+	recaptchaKeyOnce.Do(func() {
 		key, err := ioutil.ReadFile("./recaptcha-key.txt")
 		if err != nil {
 			log.Fatal(err)
