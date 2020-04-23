@@ -27,6 +27,7 @@ RUN go build -o main .
 RUN cp main /dist
 RUN cp data/wordlist.txt /dist/data
 RUN cp chunkynut-key.json /dist
+RUN cp recaptcha-key.txt /dist
 
 EXPOSE 8080
 
