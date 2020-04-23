@@ -5,6 +5,7 @@ import useQuery from './hooks/useQuery';
 import useWebSocket from './hooks/useWebSocket';
 import usePlayerID from './hooks/userPlayerID';
 import { AppColor } from './config';
+import { Loader, Message, Container } from 'semantic-ui-react';
 type GameProps = {
   appColor: AppColor;
   toaster: Toaster;
@@ -28,10 +29,17 @@ function Game({ setAppColor, appColor, toaster }: GameProps) {
     setGame(incomingMessage);
   }, [incomingMessage]);
   if (typeof gameID !== 'string') {
-    return <div>Invalid URL</div>;
+    return (
+      <Container>
+        <Message negative>
+          <Message.Header>Invalid URL</Message.Header>
+          <p>Try rejoining or recreating the game.</p>
+        </Message>
+      </Container>
+    );
   }
   if (game === null || !connected) {
-    return <div>Loading</div>;
+    return <Loader size="massive" active />;
   }
   switch (game?.BaseGame?.Status) {
     case 'pending': {
@@ -45,7 +53,15 @@ function Game({ setAppColor, appColor, toaster }: GameProps) {
       );
     }
     default: {
-      return <div>Unknown Game State {JSON.stringify(game)}</div>;
+      return (
+        <Container>
+          <Message negative>
+            <Message.Header>Unknown game state</Message.Header>
+            <p>Please send the following to the developer:</p>
+            <code style={{ wordWrap: 'break-word' }}>{JSON.stringify(game)}</code>
+          </Message>
+        </Container>
+      );
     }
   }
 }

@@ -12,6 +12,7 @@ import {
   Popup,
   Loader,
   Dimmer,
+  Message,
 } from 'semantic-ui-react';
 import { useHistory } from 'react-router-dom';
 import useAPI from './hooks/useAPI';
@@ -48,12 +49,26 @@ function Home() {
   if (createGameResult?.id) {
     history.push(`/game?gameID=${createGameResult?.id}${!playingOnThisDevice ? '&spectate' : ''}`);
   } else if (createGameError) {
-    return <div>Something broke.. Try refreshing the page.</div>;
+    return (
+      <Container>
+        <Message negative>
+          <Message.Header>Something broke</Message.Header>
+          <p>Try refreshing the page</p>
+        </Message>
+      </Container>
+    );
   }
   if (joinGameResult?.success) {
     history.push(`/game?gameID=${joinGameID}`);
   } else if (joinGameError) {
-    return <div>Something broke.. Try refreshing the page.</div>;
+    return (
+      <Container>
+        <Message negative>
+          <Message.Header>Something broke</Message.Header>
+          <p>Try refreshing the page</p>
+        </Message>
+      </Container>
+    );
   }
   return (
     <>
