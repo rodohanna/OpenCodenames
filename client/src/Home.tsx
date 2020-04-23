@@ -55,7 +55,6 @@ function Home() {
   } else if (joinGameError) {
     return <div>Something broke.. Try refreshing the page.</div>;
   }
-  console.log({ createGameLoading, joinGameLoading }, joinGameResult);
   return (
     <>
       <Container textAlign="center">

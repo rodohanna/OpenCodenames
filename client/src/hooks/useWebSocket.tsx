@@ -19,19 +19,16 @@ export default function ({
       if (socket === null) {
         setSocket(new WebSocket(socketUrl));
       }
-      socket?.addEventListener('open', (e) => {
-        console.log('Opened  connection ', e);
+      socket?.addEventListener('open', () => {
         setConnected(true);
       });
       socket?.addEventListener('message', (e) => {
-        console.log('Message from server ', e.data);
         receiveMessage(JSON.parse(e.data)?.game);
       });
       socket?.addEventListener('error', (e) => {
         console.error('WebSocket error ', e);
       });
-      socket?.addEventListener('close', (e) => {
-        console.log('Server closed connection ', e);
+      socket?.addEventListener('close', () => {
         setConnected(false);
       });
     }

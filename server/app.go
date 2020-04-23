@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -49,5 +50,9 @@ func main() {
 	http.HandleFunc("/game/join", handlers.JoinGameHandler(client))
 	http.HandleFunc("/ws", handlers.PlayerHandler(client, hub))
 	http.HandleFunc("/ws/spectate", handlers.SpectatorHandler(client, hub))
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
 }

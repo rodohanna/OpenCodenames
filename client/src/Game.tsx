@@ -17,10 +17,11 @@ function Game({ setAppColor, appColor, toaster }: GameProps) {
   const [game, setGame] = React.useState<Game | null>(null);
   const playerID = usePlayerID();
   const webSocketHost = window.location.host.includes('localhost') ? 'localhost:8080' : window.location.host;
+  const wsProtocol = window.location.protocol.includes('https') ? 'wss' : 'ws';
   const [connected, incomingMessage, sendMessage] = useWebSocket({
     webSocketUrl: isSpectator
-      ? `ws://${webSocketHost}/ws/spectate?gameID=${gameID}`
-      : `ws://${webSocketHost}/ws?gameID=${gameID}&playerID=${playerID}`,
+      ? `${wsProtocol}://${webSocketHost}/ws/spectate?gameID=${gameID}`
+      : `${wsProtocol}://${webSocketHost}/ws?gameID=${gameID}&playerID=${playerID}`,
     skip: typeof gameID !== 'string' && !isSpectator && playerID !== null,
   });
   React.useEffect(() => {
