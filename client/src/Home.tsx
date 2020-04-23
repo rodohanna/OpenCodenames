@@ -188,6 +188,11 @@ function Home() {
                     <Dimmer active={createGameLoading}>
                       <Loader size="large">Loading</Loader>
                     </Dimmer>
+                    <div style={{ color: 'gray', fontSize: '7px', marginTop: '10px' }}>
+                      <p style={{ margin: '0' }}>This site is protected by reCAPTCHA and the Google</p>
+                      <a href="https://policies.google.com/privacy">Privacy Policy</a> and
+                      <a href="https://policies.google.com/terms"> Terms of Service</a> apply.
+                    </div>
                   </Form>
                 </Grid.Column>
               </>
