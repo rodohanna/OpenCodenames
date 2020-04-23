@@ -93,3 +93,12 @@ func GetQueryValue(params *url.Values, paramName string) (string, error) {
 	}
 	return paramValueArray[0], nil
 }
+
+// GetIP implementation borrowed from https://golangcode.com/get-the-request-ip-addr/
+func GetIP(r *http.Request) string {
+	forwarded := r.Header.Get("X-FORWARDED-FOR")
+	if forwarded != "" {
+		return forwarded
+	}
+	return r.RemoteAddr
+}

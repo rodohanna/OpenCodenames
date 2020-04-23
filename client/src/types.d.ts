@@ -39,3 +39,5 @@ interface Toaster {
   green: (message: string) => void;
   yellow: (message: string) => void;
 }
+
+declare var grecaptcha: any;

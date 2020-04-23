@@ -40,11 +40,13 @@ function Home() {
       !shouldCreateGame ||
       (playingOnThisDevice && (createGamePlayerName === null || createGamePlayerName === '')) ||
       playerID === null,
+    withReCAPTCHA: true,
   });
   const [joinGameLoading, joinGameError, joinGameResult] = useAPI({
     endpoint: `/game/join?gameID=${joinGameID}&playerName=${joinGamePlayerName}&playerID=${playerID}`,
     method: 'POST',
     skip: !shouldJoinGame || joinGamePlayerName === null || joinGamePlayerName === '' || playerID === null,
+    withReCAPTCHA: false,
   });
   if (createGameResult?.id) {
     history.push(`/game?gameID=${createGameResult?.id}${!playingOnThisDevice ? '&spectate' : ''}`);

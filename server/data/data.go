@@ -2,6 +2,7 @@ package data
 
 import (
 	"bufio"
+	"io/ioutil"
 	"log"
 	"os"
 	"sync"
@@ -11,8 +12,9 @@ import (
 type WordList []string
 
 var (
-	once     sync.Once
-	instance WordList
+	once         sync.Once
+	instance     WordList
+	recaptchaKey string
 )
 
 // GetWordList returns the word list
@@ -34,4 +36,16 @@ func GetWordList() WordList {
 
 	})
 	return instance
+}
+
+// GetReCAPTCHAKey returns the token necessary to check ReCAPTCHA tests
+func GetReCAPTCHAKey() string {
+	once.Do(func() {
+		key, err := ioutil.ReadFile("./recaptcha-key.txt")
+		if err != nil {
+			log.Fatal(err)
+		}
+		recaptchaKey = string(key)
+	})
+	return recaptchaKey
 }

@@ -8,8 +8,10 @@ import (
 	"net/url"
 
 	"cloud.google.com/go/firestore"
+	"github.com/RobertDHanna/OpenCodenames/data"
 	"github.com/RobertDHanna/OpenCodenames/db"
 	h "github.com/RobertDHanna/OpenCodenames/hub"
+	"github.com/RobertDHanna/OpenCodenames/recaptcha"
 	"github.com/RobertDHanna/OpenCodenames/utils"
 	"github.com/gorilla/websocket"
 )
@@ -28,6 +30,17 @@ func CreateGameHandler(client *firestore.Client) utils.Handler {
 		}
 		playerID, playerIDErr := utils.GetQueryValue(&paramMap, "playerID")
 		playerName, playerNameErr := utils.GetQueryValue(&paramMap, "playerName")
+		recaptchaResponse, recaptchaErr := utils.GetQueryValue(&paramMap, "recaptcha")
+		if recaptchaResponse == "" || recaptchaErr != nil {
+			log.Println("A ReCAPTCHA token is required")
+			return
+		}
+		recaptcha.Init(data.GetReCAPTCHAKey())
+		success, err := recaptcha.Confirm(utils.GetIP(r), recaptchaResponse)
+		if !success || err != nil {
+			log.Println("ReCAPTCHA request failed", err)
+			return
+		}
 		playerMap := make(map[string]string)
 		teamRed := make(map[string]string)
 		teamBlue := make(map[string]string)

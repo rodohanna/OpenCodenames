@@ -78,6 +78,7 @@ $RECYCLE.BIN/
 *.lnk
 
 chunkynut-key.json
+recaptcha-key.txt
 
 # custom
 static-assets
