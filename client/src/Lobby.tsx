@@ -6,6 +6,7 @@ type LobbyProps = {
   sendMessage: (message: string) => void;
 };
 function Lobby({ game, sendMessage }: LobbyProps) {
+  const [startGameLoading, setStartGameLoading] = React.useState<boolean>(false);
   const joinLink = `${window.origin}/#/?gameID=${game.BaseGame.ID}`;
   const watchLink = `${window.origin}/#/game?gameID=${game.BaseGame.ID}&spectate`;
   return (
@@ -35,7 +36,15 @@ function Lobby({ game, sendMessage }: LobbyProps) {
               {game.YouOwnGame && (
                 <>
                   <br />
-                  <Button onClick={() => sendMessage('StartGame')} color="green" disabled={!game.GameCanStart}>
+                  <Button
+                    onClick={() => {
+                      sendMessage('StartGame');
+                      setStartGameLoading(true);
+                    }}
+                    color="green"
+                    disabled={!game.GameCanStart}
+                    loading={startGameLoading}
+                  >
                     Start game
                   </Button>
                 </>
@@ -48,7 +57,7 @@ function Lobby({ game, sendMessage }: LobbyProps) {
         <Divider />
         <Card.Group centered>
           {game.BaseGame.Players.sort().map((playerName) => (
-            <Card color="red" key={playerName}>
+            <Card color="green" key={playerName}>
               <Card.Content>
                 <Card.Description textAlign="center">
                   <Header as="h2" icon>

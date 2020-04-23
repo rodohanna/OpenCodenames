@@ -76,7 +76,8 @@ func (c *Client) Listen() {
 				if err != nil {
 					log.Println("Game broadcast error", err)
 				}
-				c.Conn.WriteJSON(map[string]*g.BaseGame{"game": bg})
+				pg := g.PlayerGame{BaseGame: *bg}
+				c.Conn.WriteJSON(map[string]g.PlayerGame{"game": pg})
 			} else {
 				playerName := game.Players[c.PlayerID]
 				if game.TeamRedSpy == playerName || game.TeamBlueSpy == playerName {

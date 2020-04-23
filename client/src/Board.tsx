@@ -2,6 +2,7 @@ import React from 'react';
 import { Divider, Container, Grid, Segment, List, Icon, Message, Button, Loader } from 'semantic-ui-react';
 import { chunk } from 'lodash';
 import { AppColor, AppColorToCSSColor } from './config';
+import { useHistory } from 'react-router-dom';
 
 type BoardProps = {
   game: Game;
@@ -14,11 +15,29 @@ type BannerMessageProps = {
   game: Game;
 };
 function BannerMessage({ game }: BannerMessageProps) {
+  const history = useHistory();
   const { You } = game;
-  const _BannerMessage = function (message: string, color: 'green' | 'yellow' | 'red' | 'blue') {
+  const _BannerMessage = function (
+    message: string,
+    color: 'green' | 'yellow' | 'red' | 'blue',
+    startNewGame: boolean = false,
+  ) {
     return (
       <Message size="big" color={color}>
         {message}
+        {startNewGame && (
+          <>
+            <br />
+            <Button
+              color="green"
+              onClick={() => {
+                history.push('/');
+              }}
+            >
+              Create new game
+            </Button>
+          </>
+        )}
       </Message>
     );
   };
@@ -27,9 +46,9 @@ function BannerMessage({ game }: BannerMessageProps) {
     BaseGame: { Status, TeamRed, TeamBlue, WhoseTurn },
   } = game;
   if (Status === 'redwon') {
-    return _BannerMessage('Red Team Won!', TeamRed.includes(You) ? 'green' : 'yellow');
+    return _BannerMessage('Red Team Won!', TeamRed.includes(You) ? 'green' : 'yellow', true);
   } else if (Status === 'bluewon') {
-    return _BannerMessage('Blue Team Won!', TeamBlue.includes(You) ? 'green' : 'yellow');
+    return _BannerMessage('Blue Team Won!', TeamBlue.includes(You) ? 'green' : 'yellow', true);
   }
   return _BannerMessage(
     YourTurn ? 'Your Turn' : WhoseTurn === 'red' ? "Red's Turn" : "Blue's Turn",
@@ -45,6 +64,8 @@ function TeamDescription({
   spy,
   guesser,
   yourTurn,
+  endTurnLoading,
+  setEndTurnLoading,
   sendMessage,
 }: {
   icon: 'chess knight' | 'chess bishop';
@@ -54,6 +75,8 @@ function TeamDescription({
   spy: string;
   guesser: string;
   yourTurn: boolean;
+  endTurnLoading: boolean;
+  setEndTurnLoading: (isLoading: boolean) => void;
   sendMessage: (message: string) => void;
 }) {
   const youAreGuesser = you === guesser;
@@ -71,7 +94,16 @@ function TeamDescription({
         ))}
       </List>
       {youAreGuesser && (
-        <Button color="red" disabled={!yourTurn} onClick={() => sendMessage('EndTurn')}>
+        <Button
+          color="red"
+          disabled={!yourTurn}
+          onClick={() => {
+            sendMessage('EndTurn');
+            setEndTurnLoading(true);
+          }}
+          loading={endTurnLoading}
+          negative
+        >
           End Turn
         </Button>
       )}
@@ -102,9 +134,20 @@ function Board({ game, sendMessage, appColor, setAppColor, toaster }: BoardProps
   const playerIsOnTeamBlue = TeamBlue.includes(You);
   const isPlayersTurn = (playerIsOnTeamRed && WhoseTurn === 'red') || (playerIsOnTeamBlue && WhoseTurn === 'blue');
   const [loadingWord, setLoadingWord] = React.useState<string | null>(null);
+  const [endTurnLoading, setEndTurnLoading] = React.useState<boolean>(false);
+  if (endTurnLoading && !isPlayersTurn) {
+    setEndTurnLoading(false);
+  }
   React.useEffect(() => {
     setLoadingWord(null);
   }, [Cards]);
+  React.useEffect(() => {
+    if ((Status === 'redwon' && playerIsOnTeamRed) || (Status === 'bluewon' && playerIsOnTeamBlue)) {
+      toaster.green('Your team won!');
+    } else if (['redwon', 'bluewon'].includes(Status)) {
+      toaster.yellow('Your team lost');
+    }
+  }, [Status, playerIsOnTeamRed, playerIsOnTeamBlue, toaster]);
   React.useEffect(() => {
     if (playerIsOnTeamRed) {
       setAppColor(AppColor.Red);
@@ -199,6 +242,8 @@ function Board({ game, sendMessage, appColor, setAppColor, toaster }: BoardProps
                 guesser={TeamRedGuesser}
                 yourTurn={YourTurn}
                 sendMessage={sendMessage}
+                endTurnLoading={endTurnLoading}
+                setEndTurnLoading={setEndTurnLoading}
               />
             </Grid.Column>
             <Grid.Column>
@@ -211,6 +256,8 @@ function Board({ game, sendMessage, appColor, setAppColor, toaster }: BoardProps
                 guesser={TeamBlueGuesser}
                 yourTurn={YourTurn}
                 sendMessage={sendMessage}
+                endTurnLoading={endTurnLoading}
+                setEndTurnLoading={setEndTurnLoading}
               />
             </Grid.Column>
           </Grid.Row>
