@@ -26,7 +26,8 @@ const recaptchaServerName = "https://www.google.com/recaptcha/api/siteverify"
 
 var recaptchaPrivateKey string
 
-func check(remoteip, response string) (r Response, err error) {
+// Check returns a Google response
+func Check(remoteip, response string) (r Response, err error) {
 	resp, err := http.PostForm(recaptchaServerName,
 		url.Values{"secret": {recaptchaPrivateKey}, "remoteip": {remoteip}, "response": {response}})
 	if err != nil {
@@ -49,7 +50,7 @@ func check(remoteip, response string) (r Response, err error) {
 
 // Confirm kicks off the check
 func Confirm(remoteip, response string) (result bool, err error) {
-	resp, err := check(remoteip, response)
+	resp, err := Check(remoteip, response)
 	result = resp.Success
 	return
 }

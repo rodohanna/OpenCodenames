@@ -36,8 +36,9 @@ func CreateGameHandler(client *firestore.Client) utils.Handler {
 			return
 		}
 		recaptcha.Init(data.GetReCAPTCHAKey())
-		success, err := recaptcha.Confirm(utils.GetIP(r), recaptchaResponse)
-		if !success || err != nil {
+		response, err := recaptcha.Check(utils.GetIP(r), recaptchaResponse)
+		log.Println("ReCAPTCHA response: ", response)
+		if response.Score < 0.1 || err != nil {
 			log.Println("ReCAPTCHA request failed", err)
 			return
 		}

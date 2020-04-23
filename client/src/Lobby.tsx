@@ -26,11 +26,17 @@ function Lobby({ game, sendMessage }: LobbyProps) {
             <>
               <div style={{ textAlign: 'left' }}>
                 <span>
-                  Join: <a href={joinLink}>{joinLink}</a>
+                  Join:{' '}
+                  <a href={joinLink} target="_blank" rel="noopener noreferrer">
+                    {joinLink}
+                  </a>
                 </span>
                 <br />
                 <span>
-                  TV: <a href={watchLink}>{watchLink}</a>
+                  TV:{' '}
+                  <a href={watchLink} target="_blank" rel="noopener noreferrer">
+                    {watchLink}
+                  </a>
                 </span>
               </div>
               {game.YouOwnGame && (
