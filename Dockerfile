@@ -30,4 +30,6 @@ RUN cp data/wordlist.txt /dist/data
 
 EXPOSE 8080
 
-CMD ["/dist/main"]
+WORKDIR /dist
+
+CMD ["main"]
