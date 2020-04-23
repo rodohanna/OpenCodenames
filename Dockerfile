@@ -28,7 +28,6 @@ RUN cp main /dist
 RUN cp data/wordlist.txt /dist/data
 RUN cp chunkynut-key.json /dist
 
-
 EXPOSE 8080
 
 WORKDIR /dist
