@@ -5,5 +5,5 @@ export enum AppColor {
 
 export const AppColorToCSSColor = {
   [AppColor.Blue]: 'cornflowerblue',
-  [AppColor.Red]: 'indianred',
+  [AppColor.Red]: '#cc0000',
 };
