@@ -28,7 +28,6 @@ func CreateGameHandler(client *firestore.Client) utils.Handler {
 		if err != nil {
 			log.Panic("Could not parse URL")
 		}
-		playerID, playerIDErr := utils.GetQueryValue(&paramMap, "playerID")
 		playerName, playerNameErr := utils.GetQueryValue(&paramMap, "playerName")
 		recaptchaResponse, recaptchaErr := utils.GetQueryValue(&paramMap, "recaptcha")
 		if recaptchaResponse == "" || recaptchaErr != nil {
@@ -46,7 +45,11 @@ func CreateGameHandler(client *firestore.Client) utils.Handler {
 		teamRed := make(map[string]string)
 		teamBlue := make(map[string]string)
 		creatorID := ""
-		if len(playerID) > 0 && len(playerName) > 0 && playerIDErr == nil && playerNameErr == nil {
+		playerID, err := utils.MakeEasyID(15)
+		if err != nil {
+			log.Println("Failure creating playerID", err)
+		}
+		if len(playerName) > 0 && playerNameErr == nil {
 			playerMap[playerID] = playerName
 			creatorID = playerID
 		}
@@ -72,7 +75,7 @@ func CreateGameHandler(client *firestore.Client) utils.Handler {
 			fmt.Fprintf(w, "failed to create game %s %s!", r.Method, id)
 			return
 		}
-		fmt.Fprintf(w, `{"id":"%s"}`, id)
+		fmt.Fprintf(w, `{"id":"%s","playerID":"%s"}`, id, playerID)
 	})
 }
 
@@ -94,22 +97,21 @@ func JoinGameHandler(client *firestore.Client) utils.Handler {
 			fmt.Fprintf(w, "Invalid playerName")
 			return
 		}
-		playerID, err := utils.GetQueryValue(&paramMap, "playerID")
+		playerID, err := utils.MakeEasyID(15)
 		if err != nil {
-			fmt.Fprintf(w, "Invalid playerID")
-			return
+			log.Println("Failure creating playerID", err)
 		}
 		err = db.AddPlayerToGame(ctx, client, gameID, playerID, playerName)
 		if err != nil {
 			if err.Error() == "playerAlreadyAdded" {
-				fmt.Fprintf(w, `{"success":true}`)
+				fmt.Fprintf(w, `{"success":true,"playerID":"%s"}`, playerID)
 				return
 			}
 			log.Printf("Failed to add player %s to %s!", playerName, gameID)
 			fmt.Fprintf(w, `{"error":"%s"}`, err)
 			return
 		}
-		fmt.Fprintf(w, `{"success":true}`)
+		fmt.Fprintf(w, `{"success":true,"playerID":"%s"}`, playerID)
 	})
 }
 
@@ -166,13 +168,19 @@ func SpectatorHandler(client *firestore.Client, hub *h.Hub) utils.Handler {
 			c.Close()
 			return
 		}
-		id, err := utils.MakeEasyID(10)
+		sessionID, err := utils.GetQueryValue(&paramMap, "sessionID")
+		if err != nil {
+			c.WriteJSON(map[string]string{"error": "missing sessionID field"})
+			c.Close()
+			return
+		}
+		id, err := utils.MakeEasyID(15)
 		if err != nil {
 			c.WriteJSON(map[string]string{"error": "could not generate temporary id"})
 			c.Close()
 			return
 		}
-		client := h.NewClient(gameID, id, hub, c, true)
+		client := h.NewClient(gameID, id, sessionID, hub, c, true)
 		hub.Register <- client
 		go func() {
 			for {
@@ -215,8 +223,14 @@ func PlayerHandler(client *firestore.Client, hub *h.Hub) utils.Handler {
 			c.Close()
 			return
 		}
-		log.Printf("Success: gameID %s playerID %s", gameID, playerID)
-		client := h.NewClient(gameID, playerID, hub, c, false)
+		sessionID, err := utils.GetQueryValue(&paramMap, "sessionID")
+		if err != nil {
+			c.WriteJSON(map[string]string{"error": "missing sessionID field"})
+			c.Close()
+			return
+		}
+		log.Printf("Success: gameID %s playerID %s sessionID %s", gameID, playerID, sessionID)
+		client := h.NewClient(gameID, playerID, sessionID, hub, c, false)
 		hub.Register <- client
 		go func() {
 			for {

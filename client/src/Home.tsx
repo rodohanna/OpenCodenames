@@ -17,7 +17,6 @@ import {
 import { useHistory } from 'react-router-dom';
 import useAPI from './hooks/useAPI';
 import useQuery from './hooks/useQuery';
-import usePlayerID from './hooks/userPlayerID';
 
 function Home() {
   const query = useQuery();
@@ -32,24 +31,24 @@ function Home() {
   const [shouldCreateGame, setShouldCreateGame] = React.useState(false);
   const [shouldJoinGame, setShouldJoinGame] = React.useState(false);
   const gameIDInParams = query.has('gameID');
-  const playerID = usePlayerID();
   const [createGameLoading, createGameError, createGameResult] = useAPI({
-    endpoint: `/game/create${playingOnThisDevice ? `?playerID=${playerID}&playerName=${createGamePlayerName}` : '?'}`,
+    endpoint: `/game/create${playingOnThisDevice ? `?playerName=${createGamePlayerName}` : '?'}`,
     method: 'POST',
-    skip:
-      !shouldCreateGame ||
-      (playingOnThisDevice && (createGamePlayerName === null || createGamePlayerName === '')) ||
-      playerID === null,
+    skip: !shouldCreateGame || (playingOnThisDevice && (createGamePlayerName === null || createGamePlayerName === '')),
     withReCAPTCHA: true,
   });
   const [joinGameLoading, joinGameError, joinGameResult] = useAPI({
-    endpoint: `/game/join?gameID=${joinGameID}&playerName=${joinGamePlayerName}&playerID=${playerID}`,
+    endpoint: `/game/join?gameID=${joinGameID}&playerName=${joinGamePlayerName}`,
     method: 'POST',
-    skip: !shouldJoinGame || joinGamePlayerName === null || joinGamePlayerName === '' || playerID === null,
+    skip: !shouldJoinGame || joinGamePlayerName === null || joinGamePlayerName === '',
     withReCAPTCHA: false,
   });
   if (createGameResult?.id) {
-    history.push(`/game?gameID=${createGameResult?.id}${!playingOnThisDevice ? '&spectate' : ''}`);
+    history.push(
+      `/game?gameID=${createGameResult?.id}${
+        !playingOnThisDevice ? '&spectate' : `&playerID=${createGameResult?.playerID}`
+      }`,
+    );
   } else if (createGameError) {
     return (
       <Container>
@@ -60,8 +59,8 @@ function Home() {
       </Container>
     );
   }
-  if (joinGameResult?.success) {
-    history.push(`/game?gameID=${joinGameID}`);
+  if (joinGameResult?.success && joinGameResult?.playerID) {
+    history.push(`/game?gameID=${joinGameID}&playerID=${joinGameResult?.playerID}`);
   } else if (joinGameError) {
     return (
       <Container>

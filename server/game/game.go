@@ -284,7 +284,7 @@ func HandleGameStart(ctx context.Context, client *firestore.Client, game *db.Gam
 
 // HandlePlayerGuess takes in an action, determines if they player is allowed to make a guess, and processes the guess
 func HandlePlayerGuess(ctx context.Context, client *firestore.Client, action string, playerID string, game *db.Game) {
-	actionParts := strings.Split(action, " ")
+	actionParts := strings.SplitN(action, " ", 2)
 	if len(actionParts) != 2 {
 		log.Println("Received an incorrectly formatted guess", actionParts, playerID)
 		return

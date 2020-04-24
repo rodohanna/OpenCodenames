@@ -1,5 +1,5 @@
 import React from 'react';
-import { Container, Header, Icon, Divider, Card, Message, Button } from 'semantic-ui-react';
+import { Container, Header, Icon, Divider, Card, Button, Segment } from 'semantic-ui-react';
 
 type LobbyProps = {
   game: Game;
@@ -18,46 +18,42 @@ function Lobby({ game, sendMessage }: LobbyProps) {
           <Header.Subheader>Waiting on players</Header.Subheader>
         </Header>
       </Container>
-      <Container textAlign="center">
-        <Message
-          compact
-          header="Invite friends!"
-          content={
-            <>
-              <div style={{ textAlign: 'left' }}>
-                <span>
-                  Join:{' '}
-                  <a href={joinLink} target="_blank" rel="noopener noreferrer">
-                    {joinLink}
-                  </a>
-                </span>
-                <br />
-                <span>
-                  TV:{' '}
-                  <a href={watchLink} target="_blank" rel="noopener noreferrer">
-                    {watchLink}
-                  </a>
-                </span>
-              </div>
-              {game.YouOwnGame && (
-                <>
-                  <br />
-                  <Button
-                    onClick={() => {
-                      sendMessage('StartGame');
-                      setStartGameLoading(true);
-                    }}
-                    color="green"
-                    disabled={!game.GameCanStart}
-                    loading={startGameLoading}
-                  >
-                    Start game
-                  </Button>
-                </>
-              )}
-            </>
-          }
-        />
+      <Container textAlign="center" text>
+        <div>
+          <Segment attached color="green">
+            Invite friends:
+            <br />
+            <small>
+              <a href={joinLink} target="_blank" rel="noopener noreferrer">
+                {joinLink}
+              </a>
+            </small>
+          </Segment>
+          <Segment attached>
+            TV link:
+            <br />
+            <small>
+              <a href={watchLink} target="_blank" rel="noopener noreferrer">
+                {watchLink}
+              </a>
+            </small>
+          </Segment>
+          {game.YouOwnGame && (
+            <Segment attached>
+              <Button
+                onClick={() => {
+                  sendMessage('StartGame');
+                  setStartGameLoading(true);
+                }}
+                color="green"
+                disabled={!game.GameCanStart}
+                loading={startGameLoading}
+              >
+                Start game
+              </Button>
+            </Segment>
+          )}
+        </div>
       </Container>
       <Container textAlign="justified">
         <Divider />

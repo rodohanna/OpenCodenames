@@ -20,6 +20,7 @@ type IncomingMessage struct {
 type Client struct {
 	GameID        string
 	PlayerID      string
+	SessionID     string
 	Hub           *Hub
 	Conn          *websocket.Conn
 	Incoming      chan *IncomingMessage
@@ -29,10 +30,11 @@ type Client struct {
 }
 
 // NewClient creates a new client
-func NewClient(gameID string, playerID string, hub *Hub, conn *websocket.Conn, spectator bool) *Client {
+func NewClient(gameID string, playerID string, sessionID string, hub *Hub, conn *websocket.Conn, spectator bool) *Client {
 	return &Client{
 		GameID:        gameID,
 		PlayerID:      playerID,
+		SessionID:     sessionID,
 		Hub:           hub,
 		Conn:          conn,
 		Incoming:      make(chan *IncomingMessage),
@@ -175,7 +177,7 @@ func (h *Hub) Run() {
 			if h.clients[game.ID] == nil {
 				h.clients[game.ID] = make(map[string]*Client)
 			}
-			h.clients[game.ID][client.PlayerID] = client
+			h.clients[game.ID][client.SessionID] = client
 			client.send <- game
 			// If there is no game watcher set up we need to start one
 			if _, ok := h.watchers[game.ID]; !ok {
@@ -190,9 +192,9 @@ func (h *Hub) Run() {
 			client.Conn.Close()
 			close(client.send)
 			close(client.Incoming)
-			if _, ok := h.clients[client.GameID][client.PlayerID]; ok {
+			if _, ok := h.clients[client.GameID][client.SessionID]; ok {
 				log.Println("removing client from hub")
-				delete(h.clients[client.GameID], client.PlayerID)
+				delete(h.clients[client.GameID], client.SessionID)
 				if len(h.clients[client.GameID]) == 0 {
 					log.Println("no more clients, stopping game watcher")
 					close(h.watchers[client.GameID].cancel)

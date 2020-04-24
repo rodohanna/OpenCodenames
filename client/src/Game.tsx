@@ -3,9 +3,9 @@ import Lobby from './Lobby';
 import Board from './Board';
 import useQuery from './hooks/useQuery';
 import useWebSocket from './hooks/useWebSocket';
-import usePlayerID from './hooks/userPlayerID';
 import { AppColor } from './config';
 import { Loader, Message, Container } from 'semantic-ui-react';
+import { v4 as uuidv4 } from 'uuid';
 type GameProps = {
   appColor: AppColor;
   toaster: Toaster;
@@ -15,14 +15,15 @@ function Game({ setAppColor, appColor, toaster }: GameProps) {
   const query = useQuery();
   const isSpectator = query.has('spectate');
   const gameID = query.get('gameID');
+  const playerID = query.get('playerID');
   const [game, setGame] = React.useState<Game | null>(null);
-  const playerID = usePlayerID();
+  const [sessionID] = React.useState<string>(uuidv4());
   const webSocketHost = window.location.host.includes('localhost') ? 'localhost:8080' : window.location.host;
   const wsProtocol = window.location.protocol.includes('https') ? 'wss' : 'ws';
   const [connected, incomingMessage, sendMessage, reconnect] = useWebSocket({
     webSocketUrl: isSpectator
-      ? `${wsProtocol}://${webSocketHost}/ws/spectate?gameID=${gameID}`
-      : `${wsProtocol}://${webSocketHost}/ws?gameID=${gameID}&playerID=${playerID}`,
+      ? `${wsProtocol}://${webSocketHost}/ws/spectate?gameID=${gameID}&sessionID=${sessionID}`
+      : `${wsProtocol}://${webSocketHost}/ws?gameID=${gameID}&playerID=${playerID}&sessionID=${sessionID}`,
     skip: typeof gameID !== 'string' && !isSpectator && playerID !== null,
   });
   React.useEffect(() => {
