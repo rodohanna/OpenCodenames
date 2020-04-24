@@ -78,6 +78,13 @@ func AddPlayerToGame(ctx context.Context, client *firestore.Client, gameID strin
 			return err
 		}
 		if _, playerFound := game.Players[playerID]; playerFound {
+			if game.Status == "pending" {
+				// Overwrite player name
+				game.Players[playerID] = playerName
+				return tx.Set(ref, map[string]interface{}{
+					"players": game.Players,
+				}, firestore.MergeAll)
+			}
 			return errors.New("playerAlreadyAdded")
 		}
 		for _, otherPlayerName := range game.Players {

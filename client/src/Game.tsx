@@ -19,15 +19,35 @@ function Game({ setAppColor, appColor, toaster }: GameProps) {
   const playerID = usePlayerID();
   const webSocketHost = window.location.host.includes('localhost') ? 'localhost:8080' : window.location.host;
   const wsProtocol = window.location.protocol.includes('https') ? 'wss' : 'ws';
-  const [connected, incomingMessage, sendMessage] = useWebSocket({
+  const [connected, incomingMessage, sendMessage, reconnect] = useWebSocket({
     webSocketUrl: isSpectator
       ? `${wsProtocol}://${webSocketHost}/ws/spectate?gameID=${gameID}`
       : `${wsProtocol}://${webSocketHost}/ws?gameID=${gameID}&playerID=${playerID}`,
     skip: typeof gameID !== 'string' && !isSpectator && playerID !== null,
   });
   React.useEffect(() => {
-    setGame(incomingMessage);
+    if (incomingMessage !== null) {
+      setGame(incomingMessage);
+    }
   }, [incomingMessage]);
+  React.useEffect(() => {
+    const intervalID = setInterval(() => {
+      sendMessage('HeartBeat');
+    }, 10000);
+    return () => {
+      clearInterval(intervalID);
+    };
+  }, [sendMessage]);
+  React.useEffect(() => {
+    const intervalID = setInterval(() => {
+      if (game && !connected) {
+        reconnect();
+      }
+    }, 1000);
+    return () => {
+      clearInterval(intervalID);
+    };
+  }, [connected, reconnect, game]);
   if (typeof gameID !== 'string') {
     return (
       <Container>
@@ -38,7 +58,7 @@ function Game({ setAppColor, appColor, toaster }: GameProps) {
       </Container>
     );
   }
-  if (game === null || !connected) {
+  if (game === null) {
     return <Loader size="massive" active />;
   }
   switch (game?.BaseGame?.Status) {

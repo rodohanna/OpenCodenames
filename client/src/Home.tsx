@@ -34,7 +34,7 @@ function Home() {
   const gameIDInParams = query.has('gameID');
   const playerID = usePlayerID();
   const [createGameLoading, createGameError, createGameResult] = useAPI({
-    endpoint: `/game/create${playingOnThisDevice ? `?playerID=${playerID}&playerName=${createGamePlayerName}` : ''}`,
+    endpoint: `/game/create${playingOnThisDevice ? `?playerID=${playerID}&playerName=${createGamePlayerName}` : '?'}`,
     method: 'POST',
     skip:
       !shouldCreateGame ||

@@ -42,12 +42,45 @@ func NewClient(gameID string, playerID string, hub *Hub, conn *websocket.Conn, s
 	}
 }
 
+func broadcastGame(c *Client, game *db.Game) {
+	if c.SpectatorOnly {
+		bg, err := g.MapGameToBaseGame(game)
+		if err != nil {
+			log.Println("Game broadcast error", err)
+		}
+		pg := g.PlayerGame{BaseGame: *bg}
+		c.Conn.WriteJSON(map[string]g.PlayerGame{"game": pg})
+	} else {
+		playerName := game.Players[c.PlayerID]
+		if game.TeamRedSpy == playerName || game.TeamBlueSpy == playerName {
+			sg, err := g.MapGameToSpyGame(game, c.PlayerID)
+			if err != nil {
+				log.Println("Game broadcast error", err)
+			}
+			c.Conn.WriteJSON(map[string]*g.PlayerGame{"game": sg})
+		} else {
+			gg, err := g.MapGameToGuesserGame(game, c.PlayerID)
+			if err != nil {
+				log.Println("Game broadcast error", err)
+			}
+			c.Conn.WriteJSON(map[string]*g.PlayerGame{"game": gg})
+		}
+	}
+}
+
 // Listen broadcasts game changes and handles client actions
 func (c *Client) Listen() {
 	ctx := context.Background()
 	for {
 		select {
 		case message := <-c.Incoming:
+			if message.Action == "HeartBeat" {
+				if game, ok := c.Hub.games[c.GameID]; ok {
+					log.Println("Sending game!", game.ID)
+					broadcastGame(c, game)
+				}
+				continue
+			}
 			if c.SpectatorOnly {
 				log.Println("only a specator, limited abilities")
 				continue
@@ -71,29 +104,7 @@ func (c *Client) Listen() {
 			log.Println("recv", message.Action)
 		case game := <-c.send:
 			log.Println("send", game)
-			if c.SpectatorOnly {
-				bg, err := g.MapGameToBaseGame(game)
-				if err != nil {
-					log.Println("Game broadcast error", err)
-				}
-				pg := g.PlayerGame{BaseGame: *bg}
-				c.Conn.WriteJSON(map[string]g.PlayerGame{"game": pg})
-			} else {
-				playerName := game.Players[c.PlayerID]
-				if game.TeamRedSpy == playerName || game.TeamBlueSpy == playerName {
-					sg, err := g.MapGameToSpyGame(game, c.PlayerID)
-					if err != nil {
-						log.Println("Game broadcast error", err)
-					}
-					c.Conn.WriteJSON(map[string]*g.PlayerGame{"game": sg})
-				} else {
-					gg, err := g.MapGameToGuesserGame(game, c.PlayerID)
-					if err != nil {
-						log.Println("Game broadcast error", err)
-					}
-					c.Conn.WriteJSON(map[string]*g.PlayerGame{"game": gg})
-				}
-			}
+			broadcastGame(c, game)
 		case <-c.Cancel:
 			log.Println("done")
 			c.Hub.unregister <- c

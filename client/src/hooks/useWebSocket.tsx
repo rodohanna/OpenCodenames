@@ -8,14 +8,21 @@ type useWebSocketParams = {
 export default function ({
   webSocketUrl,
   skip,
-}: useWebSocketParams): [boolean, Game | null, (message: string) => void] {
+}: useWebSocketParams): [boolean, Game | null, (message: string) => void, () => void] {
   const [socketUrl] = React.useState(webSocketUrl);
   const [socket, setSocket] = React.useState<WebSocket | null>(null);
   const [connected, setConnected] = React.useState(false);
   const [latestSentMessage, sendMessage] = React.useState<Message | null>(null);
   const [incomingMessage, receiveMessage] = React.useState<Game | null>(null);
+  const [shouldReconnect, setShouldReconnect] = React.useState<boolean>(false);
   React.useEffect(() => {
     if (!skip) {
+      if (shouldReconnect) {
+        socket?.close();
+        setSocket(null);
+        setShouldReconnect(false);
+        return;
+      }
       if (socket === null) {
         setSocket(new WebSocket(socketUrl));
       }
@@ -32,7 +39,7 @@ export default function ({
         setConnected(false);
       });
     }
-  }, [socketUrl, socket, skip]);
+  }, [socketUrl, socket, skip, shouldReconnect]);
   React.useEffect(() => {
     const preparedMessage = JSON.stringify(latestSentMessage);
     console.log('sending', preparedMessage);
@@ -42,5 +49,9 @@ export default function ({
   const sendMessageWrapper = (message: string) => {
     sendMessage({ Action: message });
   };
-  return [connected, incomingMessage, sendMessageWrapper];
+  const reconnect = () => {
+    console.log('attempting reconnect');
+    setShouldReconnect(true);
+  };
+  return [connected, incomingMessage, sendMessageWrapper, reconnect];
 }

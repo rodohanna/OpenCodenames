@@ -99,9 +99,12 @@ func JoinGameHandler(client *firestore.Client) utils.Handler {
 			fmt.Fprintf(w, "Invalid playerID")
 			return
 		}
-
 		err = db.AddPlayerToGame(ctx, client, gameID, playerID, playerName)
 		if err != nil {
+			if err.Error() == "playerAlreadyAdded" {
+				fmt.Fprintf(w, `{"success":true}`)
+				return
+			}
 			log.Printf("Failed to add player %s to %s!", playerName, gameID)
 			fmt.Fprintf(w, `{"error":"%s"}`, err)
 			return
@@ -184,7 +187,8 @@ func SpectatorHandler(client *firestore.Client, hub *h.Hub) utils.Handler {
 					return
 				}
 				// We drop anything the client sends us because they are only spectating
-				log.Println("Dropped: ", incoming)
+				client.Incoming <- &incoming
+				log.Println("Spectator Received: ", incoming)
 			}
 		}()
 		client.Listen()
