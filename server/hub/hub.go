@@ -102,6 +102,10 @@ func (c *Client) Listen() {
 			case message.Action == "EndTurn":
 				game := c.Hub.games[c.GameID]
 				g.HandleEndTurn(ctx, c.Hub.fireStoreClient, game, c.PlayerID)
+			case strings.Contains(message.Action, "UpdateTeam"):
+				log.Println("UpdateTeam Handler")
+				game := c.Hub.games[c.GameID]
+				g.HandleUpdateTeams(ctx, c.Hub.fireStoreClient, game, message.Action, c.PlayerID)
 			}
 			log.Println("recv", message.Action)
 		case game := <-c.send:

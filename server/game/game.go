@@ -70,6 +70,13 @@ func playerCanEndTurn(game *db.Game, playerID string) bool {
 		(playerOnTeamBlue && game.TeamBlueGuesser == playerNameBlue && game.WhoseTurn == "blue")
 }
 
+func playerCanUpdateTeams(game *db.Game, playerID string) bool {
+	if game == nil {
+		return false
+	}
+	return game.CreatorID == playerID && game.Status == "pending"
+}
+
 // MapGameToBaseGame takes a db game and maps it to a BaseGame
 func MapGameToBaseGame(game *db.Game) (*BaseGame, error) {
 	if game == nil {
@@ -93,8 +100,8 @@ func MapGameToBaseGame(game *db.Game) (*BaseGame, error) {
 		TeamRedSpy:               game.TeamRedSpy,
 		TeamBlueSpy:              game.TeamBlueSpy,
 		Cards:                    returnCards,
-		TeamRedGuesser:           "",
-		TeamBlueGuesser:          "",
+		TeamRedGuesser:           game.TeamRedGuesser,
+		TeamBlueGuesser:          game.TeamBlueGuesser,
 		WhoseTurn:                game.WhoseTurn,
 		LastCardGuessed:          game.LastCardGuessed,
 		LastCardGuessedBy:        game.LastCardGuessedBy,
@@ -108,10 +115,6 @@ func MapGameToBaseGame(game *db.Game) (*BaseGame, error) {
 	}
 	for _, playerName := range game.TeamBlue {
 		baseGame.TeamBlue = append(baseGame.TeamBlue, playerName)
-	}
-	if game.Status == "running" || game.Status == "redwon" || game.Status == "bluewon" {
-		baseGame.TeamRedGuesser = game.TeamRedGuesser
-		baseGame.TeamBlueGuesser = game.TeamBlueGuesser
 	}
 	return baseGame, nil
 }
@@ -166,40 +169,10 @@ func MapGameToSpyGame(game *db.Game, playerID string) (*PlayerGame, error) {
 func HandleGameStart(ctx context.Context, client *firestore.Client, game *db.Game, playerID string) {
 	if game.Status == "pending" && len(game.Players) >= 4 && game.CreatorID == playerID {
 		log.Println("Starting Game", game.ID)
-		teamRed := map[string]string{}
-		teamBlue := map[string]string{}
-		teamRedIDs := make([]string, 0)
-		teamBlueIDs := make([]string, 0)
-		i := 0
-		for playerID, playerName := range game.Players {
-			if i%2 == 0 {
-				teamRed[playerID] = playerName
-				teamRedIDs = append(teamRedIDs, playerID)
-			} else {
-				teamBlue[playerID] = playerName
-				teamBlueIDs = append(teamBlueIDs, playerID)
-			}
-			i++
+		if game.TeamBlueSpy == "" || game.TeamBlueGuesser == "" || game.TeamRedSpy == "" || game.TeamRedGuesser == "" {
+			log.Println("Game cannot start, required roles are not filled")
+			return
 		}
-		teamRedSpyID := teamRedIDs[rand.Intn(len(teamRedIDs))]
-		teamBlueSpyID := teamBlueIDs[rand.Intn(len(teamBlueIDs))]
-		teamRedGuesserID := ""
-		teamBlueGuesserID := ""
-		for {
-			teamRedGuesserID = teamRedIDs[rand.Intn(len(teamRedIDs))]
-			if teamRedGuesserID == teamRedSpyID {
-				continue
-			}
-			break
-		}
-		for {
-			teamBlueGuesserID = teamBlueIDs[rand.Intn(len(teamBlueIDs))]
-			if teamBlueGuesserID == teamBlueSpyID {
-				continue
-			}
-			break
-		}
-
 		wordList := data.GetWordList()
 		chosenWords := make([]string, 0, 25)
 		for {
@@ -213,7 +186,7 @@ func HandleGameStart(ctx context.Context, client *firestore.Client, game *db.Gam
 			}
 		}
 		cards := map[string]db.Card{}
-		i = 0
+		i := 0
 		for _, word := range chosenWords {
 			cards[word] = db.Card{BelongsTo: "", Guessed: false, Index: i}
 			i++
@@ -269,15 +242,9 @@ func HandleGameStart(ctx context.Context, client *firestore.Client, game *db.Gam
 			}
 		}
 		db.UpdateGame(ctx, client, game.ID, map[string]interface{}{
-			"status":          "running",
-			"teamRed":         teamRed,
-			"teamBlue":        teamBlue,
-			"teamRedSpy":      teamRed[teamRedSpyID],
-			"teamBlueSpy":     teamBlue[teamBlueSpyID],
-			"teamRedGuesser":  teamRed[teamRedGuesserID],
-			"teamBlueGuesser": teamBlue[teamBlueGuesserID],
-			"cards":           cards,
-			"whoseTurn":       "blue",
+			"status":    "running",
+			"cards":     cards,
+			"whoseTurn": "blue",
 		})
 	}
 }
@@ -362,5 +329,92 @@ func HandleEndTurn(ctx context.Context, client *firestore.Client, game *db.Game,
 		db.UpdateGame(ctx, client, game.ID, map[string]interface{}{
 			"whoseTurn": whoseTurn,
 		})
+	}
+}
+
+// HandleUpdateTeams moves a player to a new team/role
+func HandleUpdateTeams(ctx context.Context, client *firestore.Client, game *db.Game, action string, playerID string) {
+	actionParts := strings.Split(action, " ")
+	if len(actionParts) != 3 {
+		log.Println("Received an incorrectly formatted update teams request", actionParts, playerID)
+		return
+	}
+	if playerCanUpdateTeams(game, playerID) {
+		requestedPlayerName := actionParts[1]
+		newRole := actionParts[2]
+		fieldsToUpdate := []firestore.Update{}
+		playerIsOnTeamRed := false
+		playerIsOnTeamBlue := false
+		requestedPlayerID := ""
+		for playerID, playerName := range game.TeamRed {
+			if playerName == requestedPlayerName {
+				playerIsOnTeamRed = true
+				requestedPlayerID = playerID
+				break
+			}
+		}
+		for playerID, playerName := range game.TeamBlue {
+			if playerName == requestedPlayerName {
+				playerIsOnTeamBlue = true
+				requestedPlayerID = playerID
+				break
+			}
+		}
+		if !playerIsOnTeamRed && !playerIsOnTeamBlue {
+			log.Println("Update teams received a player that doesn't belong to game")
+			return
+		}
+		checkAndClearRolesIfNecessary := func() {
+			if game.TeamRedSpy == requestedPlayerName {
+				fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamRedSpy", Value: ""})
+			} else if game.TeamRedGuesser == requestedPlayerName {
+				fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamRedGuesser", Value: ""})
+			} else if game.TeamBlueSpy == requestedPlayerName {
+				fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamBlueSpy", Value: ""})
+			} else if game.TeamBlueGuesser == requestedPlayerName {
+				fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamBlueGuesser", Value: ""})
+			}
+		}
+		handleBlueToRedTeamSwitch := func() {
+			if playerIsOnTeamBlue {
+				delete(game.TeamBlue, requestedPlayerID)
+				game.TeamRed[requestedPlayerID] = requestedPlayerName
+				fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamBlue", Value: game.TeamBlue})
+				fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamRed", Value: game.TeamRed})
+			}
+		}
+		handleRedToBlueTeamSwitch := func() {
+			if playerIsOnTeamRed {
+				delete(game.TeamRed, requestedPlayerID)
+				game.TeamBlue[requestedPlayerID] = requestedPlayerName
+				fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamBlue", Value: game.TeamBlue})
+				fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamRed", Value: game.TeamRed})
+			}
+		}
+		switch newRole {
+		case "bluespy":
+			checkAndClearRolesIfNecessary()
+			fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamBlueSpy", Value: requestedPlayerName})
+			handleRedToBlueTeamSwitch()
+		case "blueguesser":
+			checkAndClearRolesIfNecessary()
+			fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamBlueGuesser", Value: requestedPlayerName})
+			handleRedToBlueTeamSwitch()
+		case "redspy":
+			checkAndClearRolesIfNecessary()
+			fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamRedSpy", Value: requestedPlayerName})
+			handleBlueToRedTeamSwitch()
+		case "redguesser":
+			checkAndClearRolesIfNecessary()
+			fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamRedGuesser", Value: requestedPlayerName})
+			handleBlueToRedTeamSwitch()
+		case "blueobs":
+			checkAndClearRolesIfNecessary()
+			handleRedToBlueTeamSwitch()
+		case "redobs":
+			checkAndClearRolesIfNecessary()
+			handleBlueToRedTeamSwitch()
+		}
+		db.UpdateGameFirestoreUpdate(ctx, client, game.ID, fieldsToUpdate)
 	}
 }

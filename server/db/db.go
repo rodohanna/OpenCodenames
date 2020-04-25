@@ -49,6 +49,18 @@ func UpdateGame(ctx context.Context, client *firestore.Client, gameID string, fi
 	return err
 }
 
+// UpdateGameFirestoreUpdate takes in a firestore Update array and processes it.
+func UpdateGameFirestoreUpdate(ctx context.Context, client *firestore.Client, gameID string, fieldsToUpdate []firestore.Update) error {
+	ref := client.Collection("games").Doc(gameID)
+	err := client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		return tx.Update(ref, fieldsToUpdate)
+	})
+	if err != nil {
+		log.Printf("UpdateGameFirestoreUpdate: An error has occurred: %s", err)
+	}
+	return err
+}
+
 // CreateGame Creates a game or returns an error if one already exists
 func CreateGame(ctx context.Context, client *firestore.Client, game *Game) error {
 	ref := client.Collection("games").Doc(game.ID)
@@ -101,6 +113,34 @@ func AddPlayerToGame(ctx context.Context, client *firestore.Client, gameID strin
 		fieldsToUpdate := map[string]interface{}{}
 		if len(game.Players) == 0 {
 			fieldsToUpdate["creatorID"] = playerID
+			fieldsToUpdate["teamBlueSpy"] = playerName
+			game.TeamBlue[playerID] = playerName
+			fieldsToUpdate["teamBlue"] = game.TeamBlue
+		} else {
+			// Try to put player on a team and in a role...
+			if game.TeamBlueSpy == "" {
+				fieldsToUpdate["teamBlueSpy"] = playerName
+				game.TeamBlue[playerID] = playerName
+				fieldsToUpdate["teamBlue"] = game.TeamBlue
+			} else if game.TeamBlueGuesser == "" {
+				fieldsToUpdate["teamBlueGuesser"] = playerName
+				game.TeamBlue[playerID] = playerName
+				fieldsToUpdate["teamBlue"] = game.TeamBlue
+			} else if game.TeamRedSpy == "" {
+				fieldsToUpdate["teamRedSpy"] = playerName
+				game.TeamRed[playerID] = playerName
+				fieldsToUpdate["teamRed"] = game.TeamRed
+			} else if game.TeamRedGuesser == "" {
+				fieldsToUpdate["teamRedGuesser"] = playerName
+				game.TeamRed[playerID] = playerName
+				fieldsToUpdate["teamRed"] = game.TeamRed
+			} else if len(game.TeamBlue) < len(game.TeamRed) {
+				game.TeamBlue[playerID] = playerName
+				fieldsToUpdate["teamBlue"] = game.TeamBlue
+			} else {
+				game.TeamRed[playerID] = playerName
+				fieldsToUpdate["teamRed"] = game.TeamRed
+			}
 		}
 		game.Players[playerID] = playerName
 		fieldsToUpdate["players"] = game.Players

@@ -45,13 +45,16 @@ func CreateGameHandler(client *firestore.Client) utils.Handler {
 		teamRed := make(map[string]string)
 		teamBlue := make(map[string]string)
 		creatorID := ""
+		teamBlueSpy := ""
 		playerID, err := utils.MakeEasyID(15)
 		if err != nil {
 			log.Println("Failure creating playerID", err)
 		}
 		if len(playerName) > 0 && playerNameErr == nil {
 			playerMap[playerID] = playerName
+			teamBlue[playerID] = playerName
 			creatorID = playerID
+			teamBlueSpy = playerName
 		}
 		game := db.Game{
 			ID:                       id,
@@ -61,7 +64,7 @@ func CreateGameHandler(client *firestore.Client) utils.Handler {
 			TeamRed:                  teamRed,
 			TeamBlue:                 teamBlue,
 			TeamRedSpy:               "",
-			TeamBlueSpy:              "",
+			TeamBlueSpy:              teamBlueSpy,
 			TeamRedGuesser:           "",
 			TeamBlueGuesser:          "",
 			WhoseTurn:                "",
