@@ -30,7 +30,7 @@ export default function ({
         setConnected(true);
       });
       socket?.addEventListener('message', (e) => {
-        receiveMessage(JSON.parse(e.data)?.game);
+        receiveMessage(JSON.parse(e.data));
       });
       socket?.addEventListener('error', (e) => {
         console.error('WebSocket error ', e);

@@ -58,7 +58,10 @@ func GetRequest(handler Handler) Handler {
 
 // WebSocketRequest TODO: document
 func WebSocketRequest(handle WSHandler) Handler {
-	upgrader := websocket.Upgrader{}
+	upgrader := websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+	}
 	upgrader.CheckOrigin = func(r *http.Request) bool {
 		// TODO: actually check the origin.
 		return true
@@ -70,7 +73,6 @@ func WebSocketRequest(handle WSHandler) Handler {
 			log.Print("upgrade:", err)
 			return
 		}
-		defer c.Close()
 		handle(r, c)
 	}
 }

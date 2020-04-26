@@ -185,24 +185,8 @@ func SpectatorHandler(client *firestore.Client, hub *h.Hub) utils.Handler {
 		}
 		client := h.NewClient(gameID, id, sessionID, hub, c, true)
 		hub.Register <- client
-		go func() {
-			for {
-				var incoming h.IncomingMessage
-				err := c.ReadJSON(&incoming)
-				if err != nil {
-					if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-						log.Printf("error: %v", err)
-					}
-					log.Println("dropping connection, spectator encountered error", err)
-					close(client.Cancel)
-					return
-				}
-				// We drop anything the client sends us because they are only spectating
-				client.Incoming <- &incoming
-				log.Println("Spectator Received: ", incoming)
-			}
-		}()
-		client.Listen()
+		go client.ReadPump()
+		go client.WritePump()
 	})
 }
 
@@ -235,22 +219,7 @@ func PlayerHandler(client *firestore.Client, hub *h.Hub) utils.Handler {
 		log.Printf("Success: gameID %s playerID %s sessionID %s", gameID, playerID, sessionID)
 		client := h.NewClient(gameID, playerID, sessionID, hub, c, false)
 		hub.Register <- client
-		go func() {
-			for {
-				var incoming h.IncomingMessage
-				err := c.ReadJSON(&incoming)
-				if err != nil {
-					if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-						log.Printf("error: %v", err)
-					}
-					log.Println("dropping connection, client encountered error", err)
-					close(client.Cancel)
-					return
-				}
-				client.Incoming <- &incoming
-				log.Println("Received: ", incoming)
-			}
-		}()
-		client.Listen()
+		go client.ReadPump()
+		go client.WritePump()
 	})
 }
