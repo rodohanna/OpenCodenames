@@ -166,9 +166,12 @@ func GetGame(ctx context.Context, client *firestore.Client, gameID string) (*Gam
 }
 
 // ListenToGame TODO: document
-func ListenToGame(ctx context.Context, client *firestore.Client, gameID string, handler func(game *Game)) func() {
+func ListenToGame(ctx context.Context, client *firestore.Client, gameID string) (chan *Game, chan *interface{}) {
+	// TODO: just return iter and let the caller manager when/how to stop
 	iter := client.Collection("games").Query.Where("id", "==", gameID).Snapshots(ctx)
-	go func() {
+	send := make(chan *Game)
+	stop := make(chan *interface{})
+	readPump := func() {
 		for {
 			doc, err := iter.Next()
 			log.Println("looking at a doc", doc)
@@ -183,12 +186,20 @@ func ListenToGame(ctx context.Context, client *firestore.Client, gameID string, 
 					if err := change.Doc.DataTo(&game); err != nil {
 						return
 					}
-					handler(&game)
+					send <- &game
 				case firestore.DocumentRemoved:
 					return
 				}
 			}
+			select {
+			case <-stop:
+				iter.Stop()
+				close(send)
+				return
+			default:
+			}
 		}
-	}()
-	return func() { iter.Stop() }
+	}
+	go readPump()
+	return send, stop
 }

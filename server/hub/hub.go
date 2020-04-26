@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"strings"
 	"time"
@@ -40,7 +41,6 @@ type Client struct {
 	SessionID     string
 	Hub           *Hub
 	Conn          *websocket.Conn
-	Incoming      chan *IncomingMessage
 	Cancel        chan struct{}
 	SpectatorOnly bool
 	send          chan *db.Game
@@ -54,7 +54,6 @@ func NewClient(gameID string, playerID string, sessionID string, hub *Hub, conn 
 		SessionID:     sessionID,
 		Hub:           hub,
 		Conn:          conn,
-		Incoming:      make(chan *IncomingMessage),
 		Cancel:        make(chan struct{}),
 		SpectatorOnly: spectator,
 		send:          make(chan *db.Game),
@@ -67,39 +66,42 @@ func broadcastGame(c *Client, game *db.Game) error {
 	if err != nil {
 		return err
 	}
-	if c.SpectatorOnly {
-		bg, err := g.MapGameToBaseGame(game)
-		if err != nil {
-			log.Println("Game broadcast error", err)
-		}
-		game := g.PlayerGame{BaseGame: *bg}
-		j, err := json.Marshal(game)
+	send := func(w io.WriteCloser, thing interface{}) error {
+		j, err := json.Marshal(thing)
 		if err != nil {
 			return err
 		}
-		w.Write(j)
+		if _, err := w.Write(j); err != nil {
+			return err
+		}
+		return nil
+	}
+	if c.SpectatorOnly {
+		bg, err := g.MapGameToBaseGame(game)
+		if err != nil {
+			log.Println("MapGameToBaseGame error", err)
+		}
+		if err := send(w, g.PlayerGame{BaseGame: *bg}); err != nil {
+			return err
+		}
 	} else {
 		playerName := game.Players[c.PlayerID]
 		if game.TeamRedSpy == playerName || game.TeamBlueSpy == playerName {
 			sg, err := g.MapGameToSpyGame(game, c.PlayerID)
 			if err != nil {
-				log.Println("Game broadcast error", err)
+				log.Println("MapGameToSpyGame error", err)
 			}
-			j, err := json.Marshal(sg)
-			if err != nil {
+			if err := send(w, sg); err != nil {
 				return err
 			}
-			w.Write(j)
 		} else {
 			gg, err := g.MapGameToGuesserGame(game, c.PlayerID)
 			if err != nil {
-				log.Println("Game broadcast error", err)
+				log.Println("MapGameToGuesserGame error", err)
 			}
-			j, err := json.Marshal(gg)
-			if err != nil {
+			if err := send(w, gg); err != nil {
 				return err
 			}
-			w.Write(j)
 		}
 	}
 	if err := w.Close(); err != nil {
@@ -117,7 +119,10 @@ func (c *Client) ReadPump() {
 	}()
 	c.Conn.SetReadLimit(maxMessageSize)
 	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
-	c.Conn.SetPongHandler(func(string) error { c.Conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	c.Conn.SetPongHandler(func(string) error {
+		c.Conn.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
 	for {
 		var message IncomingMessage
 		err := c.Conn.ReadJSON(&message)
@@ -125,18 +130,11 @@ func (c *Client) ReadPump() {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
-			log.Println("dropping connection, client encountered error", err)
+			log.Println("Dropping connection, client encountered error", err)
 			break
 		}
-		if message.Action == "HeartBeat" {
-			if game, ok := c.Hub.games[c.GameID]; ok {
-				log.Println("Sending game!", game.ID)
-				c.send <- game
-			}
-			continue
-		}
 		if c.SpectatorOnly {
-			log.Println("only a specator, limited abilities")
+			log.Println("Spectator attempted action:", message)
 			continue
 		}
 		switch {
@@ -163,7 +161,7 @@ func (c *Client) ReadPump() {
 	}
 }
 
-// WritePump does stuff
+// WritePump consumes messages off of the send channel and send them to the client
 func (c *Client) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
@@ -218,12 +216,11 @@ func NewHub(client *firestore.Client) *Hub {
 
 func reapClient(client *Client, hub *Hub) {
 	if _, ok := hub.clients[client.GameID][client.SessionID]; ok {
-		log.Println("removing client from hub")
+		log.Println("Removing client from hub")
 		close(client.send)
-		close(client.Incoming)
 		delete(hub.clients[client.GameID], client.SessionID)
 		if len(hub.clients[client.GameID]) == 0 {
-			log.Println("no more clients, stopping game watcher")
+			log.Println("No more clients, stopping game watcher", client.GameID)
 			close(hub.watchers[client.GameID].cancel)
 			delete(hub.watchers, client.GameID)
 		}
@@ -241,7 +238,7 @@ func (h *Hub) Run() {
 		// When a game changes, messages are pushed onto this channel to be broadcasted to
 		// all participants
 		case game := <-h.gameBroadcast:
-			log.Println("broadcasting game change", h.games, h.clients)
+			log.Println("Broadcasting game change", h.games, h.clients)
 			h.games[game.ID] = game
 			for _, client := range h.clients[game.ID] {
 				select {
@@ -253,7 +250,7 @@ func (h *Hub) Run() {
 			}
 		// When a client wants to join a game they push themselves onto this channel
 		case client := <-h.Register:
-			log.Println("client registration", client)
+			log.Println("Client registration", client)
 			game, err := db.GetGame(ctx, h.fireStoreClient, client.GameID)
 			if err != nil {
 				log.Println("Could not find game", err)
@@ -278,10 +275,10 @@ func (h *Hub) Run() {
 				h.watchers[game.ID] = &GameWatcher{game.ID, h.gameBroadcast, make(chan struct{})}
 				go h.watchers[game.ID].watch(h.fireStoreClient)
 			}
-			log.Println("we registered")
+			log.Println("Finished client registration")
 		// When a client leaves a game or we decide to close the connection
 		case client := <-h.Unregister:
-			log.Println("client unregistration", client)
+			log.Println("Client unregistration", client)
 			reapClient(client, h)
 		}
 	}
@@ -295,17 +292,19 @@ type GameWatcher struct {
 }
 
 func (gw *GameWatcher) watch(client *firestore.Client) {
-	log.Println("watching game", gw.gameID)
+	log.Println("Watching game:", gw.gameID)
 	ctx := context.Background()
-	stop := db.ListenToGame(ctx, client, gw.gameID, func(game *db.Game) {
-		gw.gameBroadcast <- game
-		log.Println("game update", game)
-	})
+	send, stop := db.ListenToGame(ctx, client, gw.gameID)
+	defer func() {
+		close(stop)
+	}()
 	for {
 		select {
+		case game := <-send:
+			gw.gameBroadcast <- game
+			log.Println("Game update:", game)
 		case <-gw.cancel:
-			stop()
-			log.Println("cancelling watcher", gw.gameID)
+			log.Println("Cancelling watcher:", gw.gameID)
 			return
 		}
 	}

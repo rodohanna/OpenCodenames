@@ -33,14 +33,6 @@ function Game({ setAppColor, appColor, toaster }: GameProps) {
   }, [incomingMessage]);
   React.useEffect(() => {
     const intervalID = setInterval(() => {
-      sendMessage('HeartBeat');
-    }, 10000);
-    return () => {
-      clearInterval(intervalID);
-    };
-  }, [sendMessage]);
-  React.useEffect(() => {
-    const intervalID = setInterval(() => {
       if (game && !connected) {
         reconnect();
       }

@@ -5,6 +5,8 @@ type useWebSocketParams = {
   skip: boolean;
 };
 
+const NORMAL_CLOSURE = 1000;
+
 export default function ({
   webSocketUrl,
   skip,
@@ -18,7 +20,7 @@ export default function ({
   React.useEffect(() => {
     if (!skip) {
       if (shouldReconnect) {
-        socket?.close();
+        socket?.close(NORMAL_CLOSURE);
         setSocket(null);
         setShouldReconnect(false);
         return;
@@ -39,6 +41,9 @@ export default function ({
         setConnected(false);
       });
     }
+    return () => {
+      socket?.close(NORMAL_CLOSURE);
+    };
   }, [socketUrl, socket, skip, shouldReconnect]);
   React.useEffect(() => {
     const preparedMessage = JSON.stringify(latestSentMessage);
