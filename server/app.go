@@ -44,6 +44,7 @@ func main() {
 	defer client.Close()
 	hub := hub.NewHub(client)
 	go hub.Run()
+	go hub.ListenToGames()
 	fs := http.FileServer(http.Dir("./static-assets"))
 	http.Handle("/", fs)
 	http.HandleFunc("/game/create", handlers.CreateGameHandler(client))

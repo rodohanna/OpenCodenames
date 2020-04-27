@@ -149,6 +149,7 @@ func (c *Client) ReadPump() {
 		case strings.Contains(message.Action, "Guess"):
 			game := c.Hub.games[c.GameID]
 			g.HandlePlayerGuess(ctx, c.Hub.fireStoreClient, message.Action, c.PlayerID, game)
+			log.Println("Guess ended")
 		case message.Action == "EndTurn":
 			game := c.Hub.games[c.GameID]
 			g.HandleEndTurn(ctx, c.Hub.fireStoreClient, game, c.PlayerID)
@@ -194,7 +195,6 @@ func (c *Client) WritePump() {
 type Hub struct {
 	clients         map[string]map[string]*Client // map of gameID to [map of PlayerID to Client]
 	games           map[string]*db.Game           // map of gameID to Game
-	watchers        map[string]*GameWatcher
 	fireStoreClient *firestore.Client
 	gameBroadcast   chan *db.Game
 	Register        chan *Client
@@ -206,7 +206,6 @@ func NewHub(client *firestore.Client) *Hub {
 	return &Hub{
 		clients:         map[string]map[string]*Client{},
 		games:           map[string]*db.Game{},
-		watchers:        map[string]*GameWatcher{},
 		fireStoreClient: client,
 		Register:        make(chan *Client),
 		gameBroadcast:   make(chan *db.Game),
@@ -219,11 +218,6 @@ func reapClient(client *Client, hub *Hub) {
 		log.Println("Removing client from hub")
 		close(client.send)
 		delete(hub.clients[client.GameID], client.SessionID)
-		if len(hub.clients[client.GameID]) == 0 {
-			log.Println("No more clients, stopping game watcher", client.GameID)
-			close(hub.watchers[client.GameID].cancel)
-			delete(hub.watchers, client.GameID)
-		}
 	}
 }
 
@@ -248,6 +242,7 @@ func (h *Hub) Run() {
 					reapClient(client, h)
 				}
 			}
+			log.Println("done broadcasting")
 		// When a client wants to join a game they push themselves onto this channel
 		case client := <-h.Register:
 			log.Println("Client registration", client)
@@ -269,12 +264,7 @@ func (h *Hub) Run() {
 			}
 			h.clients[game.ID][client.SessionID] = client
 			client.send <- game
-			// If there is no game watcher set up we need to start one
-			if _, ok := h.watchers[game.ID]; !ok {
-				h.games[game.ID] = game
-				h.watchers[game.ID] = &GameWatcher{game.ID, h.gameBroadcast, make(chan struct{})}
-				go h.watchers[game.ID].watch(h.fireStoreClient)
-			}
+			h.games[game.ID] = game
 			log.Println("Finished client registration")
 		// When a client leaves a game or we decide to close the connection
 		case client := <-h.Unregister:
@@ -284,28 +274,31 @@ func (h *Hub) Run() {
 	}
 }
 
-// GameWatcher listens for changes on a game and sends them to the gameBroadcast channel
-type GameWatcher struct {
-	gameID        string
-	gameBroadcast chan *db.Game
-	cancel        chan struct{}
-}
-
-func (gw *GameWatcher) watch(client *firestore.Client) {
-	log.Println("Watching game:", gw.gameID)
+// ListenToGames listens for any changes on any games and broadcasts it via gameBroadcast
+func (h *Hub) ListenToGames() {
 	ctx := context.Background()
-	send, stop := db.ListenToGame(ctx, client, gw.gameID)
-	defer func() {
-		close(stop)
-	}()
+	iter := db.ListenToGames(ctx, h.fireStoreClient)
+	defer iter.Stop()
 	for {
-		select {
-		case game := <-send:
-			gw.gameBroadcast <- game
-			log.Println("Game update:", game)
-		case <-gw.cancel:
-			log.Println("Cancelling watcher:", gw.gameID)
-			return
+		doc, err := iter.Next()
+		log.Println("looking at a doc", doc)
+		if err != nil {
+			log.Println("err", err)
+			continue
+		}
+		for _, change := range doc.Changes {
+			switch change.Kind {
+			case firestore.DocumentModified:
+				var game db.Game
+				if err := change.Doc.DataTo(&game); err != nil {
+					log.Println("Doc to game err", err)
+					continue
+				}
+				log.Println("broadcasting game change listener")
+				h.gameBroadcast <- &game
+			case firestore.DocumentRemoved:
+				continue
+			}
 		}
 	}
 }

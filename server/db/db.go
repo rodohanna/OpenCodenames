@@ -165,41 +165,7 @@ func GetGame(ctx context.Context, client *firestore.Client, gameID string) (*Gam
 	return &game, nil
 }
 
-// ListenToGame TODO: document
-func ListenToGame(ctx context.Context, client *firestore.Client, gameID string) (chan *Game, chan *interface{}) {
-	// TODO: just return iter and let the caller manager when/how to stop
-	iter := client.Collection("games").Query.Where("id", "==", gameID).Snapshots(ctx)
-	send := make(chan *Game)
-	stop := make(chan *interface{})
-	readPump := func() {
-		for {
-			doc, err := iter.Next()
-			log.Println("looking at a doc", doc)
-			if err != nil {
-				log.Println("err", err)
-				return
-			}
-			for _, change := range doc.Changes {
-				switch change.Kind {
-				case firestore.DocumentModified:
-					var game Game
-					if err := change.Doc.DataTo(&game); err != nil {
-						return
-					}
-					send <- &game
-				case firestore.DocumentRemoved:
-					return
-				}
-			}
-			select {
-			case <-stop:
-				iter.Stop()
-				close(send)
-				return
-			default:
-			}
-		}
-	}
-	go readPump()
-	return send, stop
+// ListenToGames returns an iterator that returns games that have been updated.
+func ListenToGames(ctx context.Context, client *firestore.Client) *firestore.QuerySnapshotIterator {
+	return client.Collection("games").Snapshots(ctx)
 }
