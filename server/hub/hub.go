@@ -3,7 +3,6 @@ package hub
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"strings"
@@ -114,7 +113,7 @@ func broadcastGame(c *Client, game *db.Game) error {
 func (c *Client) ReadPump() {
 	ctx := context.Background()
 	defer func() {
-		c.Hub.Unregister <- c
+		c.Hub.unregister <- c
 		c.Conn.Close()
 	}()
 	c.Conn.SetReadLimit(maxMessageSize)
@@ -179,7 +178,7 @@ func (c *Client) WritePump() {
 			}
 			err := broadcastGame(c, game)
 			if err != nil {
-				fmt.Println(err)
+				log.Println("broadcaseGame err:", err)
 				return
 			}
 		case <-ticker.C:
@@ -198,7 +197,7 @@ type Hub struct {
 	fireStoreClient *firestore.Client
 	gameBroadcast   chan *db.Game
 	Register        chan *Client
-	Unregister      chan *Client
+	unregister      chan *Client
 }
 
 // NewHub creates a new hub
@@ -209,7 +208,7 @@ func NewHub(client *firestore.Client) *Hub {
 		fireStoreClient: client,
 		Register:        make(chan *Client),
 		gameBroadcast:   make(chan *db.Game),
-		Unregister:      make(chan *Client),
+		unregister:      make(chan *Client),
 	}
 }
 
@@ -242,7 +241,6 @@ func (h *Hub) Run() {
 					reapClient(client, h)
 				}
 			}
-			log.Println("done broadcasting")
 		// When a client wants to join a game they push themselves onto this channel
 		case client := <-h.Register:
 			log.Println("Client registration", client)
@@ -267,7 +265,7 @@ func (h *Hub) Run() {
 			h.games[game.ID] = game
 			log.Println("Finished client registration")
 		// When a client leaves a game or we decide to close the connection
-		case client := <-h.Unregister:
+		case client := <-h.unregister:
 			log.Println("Client unregistration", client)
 			reapClient(client, h)
 		}
