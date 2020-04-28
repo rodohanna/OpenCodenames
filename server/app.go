@@ -42,6 +42,19 @@ func main() {
 		log.Fatalf("Failed initializing Firestore: %v", err)
 	}
 	defer client.Close()
+	if herokuAppURL := os.Getenv("HEROKU_APP_URL"); herokuAppURL != "" {
+		interval := time.Duration(30) * time.Minute
+		ticker := time.NewTicker(interval)
+		go func() {
+			for {
+				select {
+				case <-ticker.C:
+					log.Println("pinging: ", herokuAppURL)
+					http.Get(herokuAppURL)
+				}
+			}
+		}()
+	}
 	hub := hub.NewHub(client)
 	go hub.Run()
 	go hub.ListenToGames()

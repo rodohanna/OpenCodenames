@@ -332,6 +332,23 @@ func HandleEndTurn(ctx context.Context, client *firestore.Client, game *db.Game,
 	}
 }
 
+// HandleRestartGame restarts the active game if it is finished
+func HandleRestartGame(ctx context.Context, client *firestore.Client, game *db.Game, playerID string) {
+	if game == nil {
+		return
+	}
+	if game.WhoseTurn == "over" {
+		db.UpdateGame(ctx, client, game.ID, map[string]interface{}{
+			"cards":                    map[string]interface{}{},
+			"status":                   "pending",
+			"whoseTurn":                "blue",
+			"lastCardGuessed":          "",
+			"lastCardGuessedBy":        "",
+			"lastCardGuessedCorrectly": false,
+		})
+	}
+}
+
 // HandleUpdateTeams moves a player to a new team/role
 func HandleUpdateTeams(ctx context.Context, client *firestore.Client, game *db.Game, action string, playerID string) {
 	actionParts := strings.Split(action, " ")
@@ -342,7 +359,7 @@ func HandleUpdateTeams(ctx context.Context, client *firestore.Client, game *db.G
 	if playerCanUpdateTeams(game, playerID) {
 		requestedPlayerName := actionParts[1]
 		newRole := actionParts[2]
-		fieldsToUpdate := []firestore.Update{}
+		fieldsToUpdate := map[string]interface{}{}
 		playerIsOnTeamRed := false
 		playerIsOnTeamBlue := false
 		requestedPlayerID := ""
@@ -366,47 +383,47 @@ func HandleUpdateTeams(ctx context.Context, client *firestore.Client, game *db.G
 		}
 		checkAndClearRolesIfNecessary := func() {
 			if game.TeamRedSpy == requestedPlayerName {
-				fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamRedSpy", Value: ""})
+				fieldsToUpdate["teamRedSpy"] = ""
 			} else if game.TeamRedGuesser == requestedPlayerName {
-				fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamRedGuesser", Value: ""})
+				fieldsToUpdate["teamRedGuesser"] = ""
 			} else if game.TeamBlueSpy == requestedPlayerName {
-				fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamBlueSpy", Value: ""})
+				fieldsToUpdate["teamBlueSpy"] = ""
 			} else if game.TeamBlueGuesser == requestedPlayerName {
-				fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamBlueGuesser", Value: ""})
+				fieldsToUpdate["teamBlueGuesser"] = ""
 			}
 		}
 		handleBlueToRedTeamSwitch := func() {
 			if playerIsOnTeamBlue {
 				delete(game.TeamBlue, requestedPlayerID)
 				game.TeamRed[requestedPlayerID] = requestedPlayerName
-				fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamBlue", Value: game.TeamBlue})
-				fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamRed", Value: game.TeamRed})
+				fieldsToUpdate["teamBlue"] = game.TeamBlue
+				fieldsToUpdate["teamRed"] = game.TeamRed
 			}
 		}
 		handleRedToBlueTeamSwitch := func() {
 			if playerIsOnTeamRed {
 				delete(game.TeamRed, requestedPlayerID)
 				game.TeamBlue[requestedPlayerID] = requestedPlayerName
-				fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamBlue", Value: game.TeamBlue})
-				fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamRed", Value: game.TeamRed})
+				fieldsToUpdate["teamBlue"] = game.TeamBlue
+				fieldsToUpdate["teamRed"] = game.TeamRed
 			}
 		}
 		switch newRole {
 		case "bluespy":
 			checkAndClearRolesIfNecessary()
-			fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamBlueSpy", Value: requestedPlayerName})
+			fieldsToUpdate["teamBlueSpy"] = requestedPlayerName
 			handleRedToBlueTeamSwitch()
 		case "blueguesser":
 			checkAndClearRolesIfNecessary()
-			fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamBlueGuesser", Value: requestedPlayerName})
+			fieldsToUpdate["teamBlueGuesser"] = requestedPlayerName
 			handleRedToBlueTeamSwitch()
 		case "redspy":
 			checkAndClearRolesIfNecessary()
-			fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamRedSpy", Value: requestedPlayerName})
+			fieldsToUpdate["teamRedSpy"] = requestedPlayerName
 			handleBlueToRedTeamSwitch()
 		case "redguesser":
 			checkAndClearRolesIfNecessary()
-			fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: "teamRedGuesser", Value: requestedPlayerName})
+			fieldsToUpdate["teamRedGuesser"] = requestedPlayerName
 			handleBlueToRedTeamSwitch()
 		case "blueobs":
 			checkAndClearRolesIfNecessary()
@@ -415,6 +432,6 @@ func HandleUpdateTeams(ctx context.Context, client *firestore.Client, game *db.G
 			checkAndClearRolesIfNecessary()
 			handleBlueToRedTeamSwitch()
 		}
-		db.UpdateGameFirestoreUpdate(ctx, client, game.ID, fieldsToUpdate)
+		db.UpdateGame(ctx, client, game.ID, fieldsToUpdate)
 	}
 }

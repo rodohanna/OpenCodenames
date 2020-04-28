@@ -38,25 +38,17 @@ type Game struct {
 }
 
 // UpdateGame Updates a game
-func UpdateGame(ctx context.Context, client *firestore.Client, gameID string, fieldsToUpdate map[string]interface{}) error {
+func UpdateGame(ctx context.Context, client *firestore.Client, gameID string, mapOfUpdates map[string]interface{}) error {
 	ref := client.Collection("games").Doc(gameID)
-	err := client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
-		return tx.Set(ref, fieldsToUpdate, firestore.MergeAll)
-	})
-	if err != nil {
-		log.Printf("UpdateGame: An error has occurred: %s", err)
+	fieldsToUpdate := []firestore.Update{}
+	for key, value := range mapOfUpdates {
+		fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: key, Value: value})
 	}
-	return err
-}
-
-// UpdateGameFirestoreUpdate takes in a firestore Update array and processes it.
-func UpdateGameFirestoreUpdate(ctx context.Context, client *firestore.Client, gameID string, fieldsToUpdate []firestore.Update) error {
-	ref := client.Collection("games").Doc(gameID)
 	err := client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
 		return tx.Update(ref, fieldsToUpdate)
 	})
 	if err != nil {
-		log.Printf("UpdateGameFirestoreUpdate: An error has occurred: %s", err)
+		log.Printf("UpdateGame: An error has occurred: %s", err)
 	}
 	return err
 }

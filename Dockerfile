@@ -29,6 +29,8 @@ RUN cp data/wordlist.txt /dist/data
 RUN cp chunkynut-key.json /dist
 RUN cp recaptcha-key.txt /dist
 
+ENV HEROKU_APP_URL=https://chunky-codenames.herokuapp.com/
+
 EXPOSE 8080
 
 WORKDIR /dist

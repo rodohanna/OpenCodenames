@@ -43,6 +43,7 @@ type Client struct {
 	Cancel        chan struct{}
 	SpectatorOnly bool
 	send          chan *db.Game
+	serverError   chan string
 }
 
 // NewClient creates a new client
@@ -56,6 +57,7 @@ func NewClient(gameID string, playerID string, sessionID string, hub *Hub, conn 
 		Cancel:        make(chan struct{}),
 		SpectatorOnly: spectator,
 		send:          make(chan *db.Game),
+		serverError:   make(chan string),
 	}
 }
 
@@ -152,6 +154,9 @@ func (c *Client) ReadPump() {
 		case message.Action == "EndTurn":
 			game := c.Hub.games[c.GameID]
 			g.HandleEndTurn(ctx, c.Hub.fireStoreClient, game, c.PlayerID)
+		case message.Action == "RestartGame":
+			game := c.Hub.games[c.GameID]
+			g.HandleRestartGame(ctx, c.Hub.fireStoreClient, game, c.PlayerID)
 		case strings.Contains(message.Action, "UpdateTeam"):
 			log.Println("UpdateTeam Handler")
 			game := c.Hub.games[c.GameID]
@@ -186,6 +191,10 @@ func (c *Client) WritePump() {
 			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
+		case errStr := <-c.serverError:
+			c.Conn.WriteJSON(map[string]string{"error": errStr})
+			return
+
 		}
 	}
 }
@@ -247,14 +256,12 @@ func (h *Hub) Run() {
 			game, err := db.GetGame(ctx, h.fireStoreClient, client.GameID)
 			if err != nil {
 				log.Println("Could not find game", err)
-				client.Conn.WriteJSON(map[string]string{"error": "could not find game"})
-				reapClient(client, h)
+				client.serverError <- "could not find game"
 				continue
 			}
 			if _, ok := game.Players[client.PlayerID]; !ok && !client.SpectatorOnly {
 				log.Println("Player does not belong to game and is not spectator", err)
-				client.Conn.WriteJSON(map[string]string{"error": "access denied"})
-				reapClient(client, h)
+				client.serverError <- "access denied"
 				continue
 			}
 			if h.clients[game.ID] == nil {

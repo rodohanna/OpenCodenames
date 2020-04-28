@@ -4,7 +4,7 @@ import Board from './Board';
 import useQuery from './hooks/useQuery';
 import useWebSocket from './hooks/useWebSocket';
 import { AppColor } from './config';
-import { Loader, Message, Container } from 'semantic-ui-react';
+import { Loader, Message, Container, Button } from 'semantic-ui-react';
 import { v4 as uuidv4 } from 'uuid';
 type GameProps = {
   appColor: AppColor;
@@ -54,29 +54,47 @@ function Game({ setAppColor, appColor, toaster }: GameProps) {
   if (game === null) {
     return <Loader size="massive" active />;
   }
-  switch (game?.BaseGame?.Status) {
-    case 'pending': {
-      return <Lobby game={game} sendMessage={sendMessage} />;
+  const getGameBody = () => {
+    switch (game?.BaseGame?.Status) {
+      case 'pending': {
+        return <Lobby game={game} sendMessage={sendMessage} />;
+      }
+      case 'running':
+      case 'redwon':
+      case 'bluewon': {
+        return (
+          <Board
+            game={game}
+            sendMessage={sendMessage}
+            appColor={appColor}
+            setAppColor={setAppColor}
+            toaster={toaster}
+          />
+        );
+      }
+      default: {
+        return (
+          <Container>
+            <Message negative>
+              <Message.Header>Unknown game state</Message.Header>
+              <p>Please send the following to the developer:</p>
+              <code style={{ wordWrap: 'break-word' }}>{JSON.stringify(game)}</code>
+            </Message>
+          </Container>
+        );
+      }
     }
-    case 'running':
-    case 'redwon':
-    case 'bluewon': {
-      return (
-        <Board game={game} sendMessage={sendMessage} appColor={appColor} setAppColor={setAppColor} toaster={toaster} />
-      );
-    }
-    default: {
-      return (
-        <Container>
-          <Message negative>
-            <Message.Header>Unknown game state</Message.Header>
-            <p>Please send the following to the developer:</p>
-            <code style={{ wordWrap: 'break-word' }}>{JSON.stringify(game)}</code>
-          </Message>
-        </Container>
-      );
-    }
-  }
+  };
+  return (
+    <>
+      <Container style={{ marginBottom: '2px' }}>
+        <Button as="a" href="/#">
+          Home
+        </Button>
+      </Container>
+      {getGameBody()}
+    </>
+  );
 }
 
 export default Game;

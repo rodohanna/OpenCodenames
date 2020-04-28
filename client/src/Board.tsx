@@ -2,7 +2,6 @@ import React from 'react';
 import { Divider, Container, Grid, Segment, List, Icon, Message, Button, Loader } from 'semantic-ui-react';
 import { chunk } from 'lodash';
 import { AppColor, AppColorToCSSColor } from './config';
-import { useHistory } from 'react-router-dom';
 
 type BoardProps = {
   game: Game;
@@ -13,14 +12,16 @@ type BoardProps = {
 };
 type BannerMessageProps = {
   game: Game;
+  sendMessage: (message: string) => void;
 };
-function BannerMessage({ game }: BannerMessageProps) {
-  const history = useHistory();
+function BannerMessage({ game, sendMessage }: BannerMessageProps) {
   const { You } = game;
+  const [restartingGame, setRestartingGame] = React.useState(false);
   const _BannerMessage = function (
     message: string,
     color: 'green' | 'yellow' | 'red' | 'blue',
-    startNewGame: boolean = false,
+    startNewGame: boolean,
+    sendMessage: (message: string) => void,
   ) {
     return (
       <Message size="big" color={color}>
@@ -31,10 +32,13 @@ function BannerMessage({ game }: BannerMessageProps) {
             <Button
               color="green"
               onClick={() => {
-                history.push('/');
+                setRestartingGame(true);
+                sendMessage('RestartGame');
               }}
+              disabled={!game.YouOwnGame || restartingGame}
+              loading={restartingGame}
             >
-              Create new game
+              Restart game
             </Button>
           </>
         )}
@@ -46,13 +50,15 @@ function BannerMessage({ game }: BannerMessageProps) {
     BaseGame: { Status, TeamRed, TeamBlue, WhoseTurn },
   } = game;
   if (Status === 'redwon') {
-    return _BannerMessage('Red Team Won!', TeamRed.includes(You) ? 'green' : 'yellow', true);
+    return _BannerMessage('Red Team Won!', TeamRed.includes(You) ? 'green' : 'yellow', true, sendMessage);
   } else if (Status === 'bluewon') {
-    return _BannerMessage('Blue Team Won!', TeamBlue.includes(You) ? 'green' : 'yellow', true);
+    return _BannerMessage('Blue Team Won!', TeamBlue.includes(You) ? 'green' : 'yellow', true, sendMessage);
   }
   return _BannerMessage(
     YourTurn ? 'Your Turn' : WhoseTurn === 'red' ? "Red's Turn" : "Blue's Turn",
     YourTurn ? 'green' : WhoseTurn === 'red' ? 'red' : 'blue',
+    false,
+    sendMessage,
   );
 }
 
@@ -225,7 +231,7 @@ function Board({ game, sendMessage, appColor, setAppColor, toaster }: BoardProps
   }, [Cards, TeamBlueGuesser, TeamRedGuesser, You, YourTurn, sendMessage, gameIsRunning, loadingWord]);
   return (
     <Container textAlign="center">
-      <BannerMessage game={game} />
+      <BannerMessage game={game} sendMessage={sendMessage} />
       <Segment padded>
         <Grid columns={2} textAlign="center">
           <Grid.Row>
