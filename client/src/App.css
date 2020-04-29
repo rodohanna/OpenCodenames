@@ -43,12 +43,31 @@
 }
 
 /* fighting semantic-ui styles */
-.ui.stackable.celled.grid > .row > .column.column-override {
-  padding: 6px !important;
+.ui.celled.grid > .column:not(.row),
+.ui.celled.grid > .row > .column.column-override {
+  padding: 7px !important;
 }
 
 .ui.segment.game-segment:hover {
   text-decoration: underline;
+}
+
+.ui.segment.game-segment {
+  font-size: 2vw;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+@media screen and (max-width: 500px) {
+  .ui.segment.game-segment {
+    min-height: 35px;
+    padding: 0;
+  }
+  .ui.celled.grid > .column:not(.row),
+  .ui.celled.grid > .row > .column.column-override {
+    padding: 4px !important;
+  }
 }
 
 .card-guessed {

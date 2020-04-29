@@ -214,13 +214,15 @@ function Board({ game, sendMessage, appColor, setAppColor, toaster }: BoardProps
                   }}
                   disabled={!gameIsRunning}
                 >
-                  {cardName === loadingWord ? (
-                    <Loader active inline size="tiny" />
-                  ) : cardData.Guessed ? (
-                    <div className="card-guessed">{cardName.toLocaleUpperCase()}</div>
-                  ) : (
-                    cardName.toLocaleUpperCase()
-                  )}
+                  <div>
+                    {cardName === loadingWord ? (
+                      <Loader active inline size="tiny" />
+                    ) : cardData.Guessed ? (
+                      <div className="card-guessed">{cardName.toLocaleUpperCase()}</div>
+                    ) : (
+                      cardName.toLocaleUpperCase()
+                    )}
+                  </div>
                 </Segment>
               </Grid.Column>
             );
@@ -269,13 +271,7 @@ function Board({ game, sendMessage, appColor, setAppColor, toaster }: BoardProps
           </Grid.Row>
         </Grid>
       </Segment>
-      <Grid
-        stackable
-        columns={5}
-        container
-        celled="internally"
-        style={{ backgroundColor: AppColorToCSSColor[appColor] }}
-      >
+      <Grid columns={5} celled="internally" style={{ backgroundColor: AppColorToCSSColor[appColor] }}>
         {gridRows}
       </Grid>
     </Container>
