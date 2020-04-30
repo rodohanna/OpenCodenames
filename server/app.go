@@ -16,10 +16,6 @@ import (
 	"google.golang.org/api/option"
 )
 
-func index(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "/ %s!", r.Method)
-}
-
 func initFirestore() (*firestore.Client, error) {
 	ctx := context.Background()
 	sa := option.WithCredentialsFile("./chunkynut-key.json")

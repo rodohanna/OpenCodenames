@@ -317,7 +317,7 @@ func HandlePlayerGuess(ctx context.Context, client *firestore.Client, action str
 	}
 }
 
-// HandleEndTurn ends the turn for the given team
+// HandleEndTurn Ends the turn for the given team.
 func HandleEndTurn(ctx context.Context, client *firestore.Client, game *db.Game, playerID string) {
 	if playerCanEndTurn(game, playerID) {
 		whoseTurn := game.WhoseTurn
@@ -332,7 +332,7 @@ func HandleEndTurn(ctx context.Context, client *firestore.Client, game *db.Game,
 	}
 }
 
-// HandleRestartGame restarts the active game if it is finished
+// HandleRestartGame restarts the active game if it is finished.
 func HandleRestartGame(ctx context.Context, client *firestore.Client, game *db.Game, playerID string) {
 	if game == nil {
 		return
@@ -349,7 +349,7 @@ func HandleRestartGame(ctx context.Context, client *firestore.Client, game *db.G
 	}
 }
 
-// HandleUpdateTeams moves a player to a new team/role
+// HandleUpdateTeams moves a player to a new team/role.
 func HandleUpdateTeams(ctx context.Context, client *firestore.Client, game *db.Game, action string, playerID string) {
 	actionParts := strings.Split(action, " ")
 	if len(actionParts) != 3 {
@@ -378,7 +378,7 @@ func HandleUpdateTeams(ctx context.Context, client *firestore.Client, game *db.G
 			}
 		}
 		if !playerIsOnTeamRed && !playerIsOnTeamBlue {
-			log.Println("Update teams received a player that doesn't belong to game")
+			log.Println("Update teams received a player that doesn't belong to game: ", game.ID)
 			return
 		}
 		checkAndClearRolesIfNecessary := func() {

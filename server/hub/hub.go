@@ -140,29 +140,31 @@ func (c *Client) ReadPump() {
 		}
 		switch {
 		case message.Action == "StartGame":
-			log.Println("StartGame Handler")
 			game, ok := c.Hub.games[c.GameID]
 			if !ok {
 				log.Println("Error: could not find client game")
 				continue
 			}
+			log.Println("ReadPump:StartGame", game)
 			g.HandleGameStart(ctx, c.Hub.fireStoreClient, game, c.PlayerID)
 		case strings.Contains(message.Action, "Guess"):
 			game := c.Hub.games[c.GameID]
+			log.Println("ReadPump:HandleGuess", game)
 			g.HandlePlayerGuess(ctx, c.Hub.fireStoreClient, message.Action, c.PlayerID, game)
-			log.Println("Guess ended")
 		case message.Action == "EndTurn":
 			game := c.Hub.games[c.GameID]
+			log.Println("ReadPump:EndTurn", game)
 			g.HandleEndTurn(ctx, c.Hub.fireStoreClient, game, c.PlayerID)
 		case message.Action == "RestartGame":
 			game := c.Hub.games[c.GameID]
+			log.Println("ReadPump:RestartGame", game)
 			g.HandleRestartGame(ctx, c.Hub.fireStoreClient, game, c.PlayerID)
 		case strings.Contains(message.Action, "UpdateTeam"):
-			log.Println("UpdateTeam Handler")
 			game := c.Hub.games[c.GameID]
+			log.Println("ReadPump:UpdateTeam", game)
 			g.HandleUpdateTeams(ctx, c.Hub.fireStoreClient, game, message.Action, c.PlayerID)
 		}
-		log.Println("Received: ", message)
+		log.Println("ReadPump Received: ", message)
 	}
 }
 
@@ -240,27 +242,27 @@ func (h *Hub) Run() {
 		// When a game changes, messages are pushed onto this channel to be broadcasted to
 		// all participants
 		case game := <-h.gameBroadcast:
-			log.Println("Broadcasting game change", h.games, h.clients)
+			log.Println("Broadcasting game change", game)
 			h.games[game.ID] = game
 			for _, client := range h.clients[game.ID] {
 				select {
 				case client.send <- game:
 				default:
-					log.Println("Closing client to not block")
+					log.Println("Client may be blocking, dropping connection")
 					reapClient(client, h)
 				}
 			}
 		// When a client wants to join a game they push themselves onto this channel
 		case client := <-h.Register:
-			log.Println("Client registration", client)
+			log.Println("Client registered:", client)
 			game, err := db.GetGame(ctx, h.fireStoreClient, client.GameID)
 			if err != nil {
-				log.Println("Could not find game", err)
+				log.Println("Client Registration: Could not find game", err)
 				client.serverError <- "could not find game"
 				continue
 			}
 			if _, ok := game.Players[client.PlayerID]; !ok && !client.SpectatorOnly {
-				log.Println("Player does not belong to game and is not spectator", err)
+				log.Println("Client Registration: Player does not belong to game and is not spectator", err)
 				client.serverError <- "access denied"
 				continue
 			}
@@ -286,7 +288,6 @@ func (h *Hub) ListenToGames() {
 	defer iter.Stop()
 	for {
 		doc, err := iter.Next()
-		log.Println("looking at a doc", doc)
 		if err != nil {
 			log.Println("err", err)
 			continue
@@ -299,7 +300,6 @@ func (h *Hub) ListenToGames() {
 					log.Println("Doc to game err", err)
 					continue
 				}
-				log.Println("broadcasting game change listener")
 				h.gameBroadcast <- &game
 			case firestore.DocumentRemoved:
 				continue

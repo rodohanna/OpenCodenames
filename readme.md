@@ -2,7 +2,7 @@
 
 A real-time implementation of Codenames created with React/TypeScript and Golang.
 
-[You can play the game here!](https://chunky-codenames.herokuapp.com/#/)
+[You can play the game here!](https://www.chunkynut.com/#/)
 
 ## Installation
 
@@ -48,9 +48,7 @@ Players join games and are placed in a "Hub" that maps games to "Clients". A Cli
 
 ### Firestore
 
-Firestore allows the application to listen for real-time changes on a document. When one or more Clients want to join a game, a Goroutine is started that listens for changes. When a change happens, the Goroutine notifies the Hub of the change and the Clients are notified.
-
-As soon as all clients disconnect from the game the listener is stopped. There is only ever one listener running at a time for a given game.
+Firestore allows the application to listen for real-time changes on a query/document/collection. A Goroutine is started when the app starts that listens for all changes on the "games" collection. When a change occurs, the Goroutine notifies the Hub of the change and Clients subscribed to the given game are notified.
 
 ### Browser
 

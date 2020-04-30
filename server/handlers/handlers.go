@@ -20,13 +20,15 @@ import (
 func CreateGameHandler(client *firestore.Client) utils.Handler {
 	return utils.PostRequest(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.Background()
-		id, err := utils.MakeEasyID(4)
+		id, err := utils.MakeEasyID(5)
 		if err != nil {
-			log.Panic("Could not make an ID")
+			log.Println("Could not make an ID", err)
+			return
 		}
 		paramMap, err := url.ParseQuery(r.URL.RawQuery)
 		if err != nil {
-			log.Panic("Could not parse URL")
+			log.Println("Could not parse URL", err)
+			return
 		}
 		playerName, playerNameErr := utils.GetQueryValue(&paramMap, "playerName")
 		recaptchaResponse, recaptchaErr := utils.GetQueryValue(&paramMap, "recaptcha")
@@ -82,13 +84,14 @@ func CreateGameHandler(client *firestore.Client) utils.Handler {
 	})
 }
 
-// JoinGameHandler TODO: document
+// JoinGameHandler Handles adding a player to game
 func JoinGameHandler(client *firestore.Client) utils.Handler {
 	return utils.PostRequest(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.Background()
 		paramMap, err := url.ParseQuery(r.URL.RawQuery)
 		if err != nil {
-			log.Panic("Could not parse URL")
+			log.Println("Could not parse URL", err)
+			return
 		}
 		gameID, err := utils.GetQueryValue(&paramMap, "gameID")
 		if err != nil {
@@ -118,51 +121,12 @@ func JoinGameHandler(client *firestore.Client) utils.Handler {
 	})
 }
 
-// EchoHandler TODO: document
-func EchoHandler() utils.Handler {
-	return utils.WebSocketRequest(func(r *http.Request, c *websocket.Conn) {
-		paramMap, err := url.ParseQuery(r.URL.RawQuery)
-		if err != nil {
-			log.Println("Could not parse URL")
-			return
-		}
-		gameIDArray, gameIDExists := paramMap["gameID"]
-		if !gameIDExists || len(gameIDArray) != 1 {
-			c.WriteJSON(map[string]string{"error": "missing gameID field"})
-			c.Close()
-			return
-		}
-		playerIDArray, playerIDExists := paramMap["playerID"]
-		if !playerIDExists || len(playerIDArray) != 1 {
-			c.WriteJSON(map[string]string{"error": "missing playerID field"})
-			c.Close()
-			return
-		}
-		gameID := gameIDArray[0]
-		playerID := playerIDArray[0]
-		log.Printf("Success: gameID %s playerID %s", gameID, playerID)
-		for {
-			mt, message, err := c.ReadMessage()
-			if err != nil {
-				log.Println("read:", err)
-				break
-			}
-			log.Printf("recv: %s", message)
-			err = c.WriteMessage(mt, message)
-			if err != nil {
-				log.Println("write:", err)
-				break
-			}
-		}
-	})
-}
-
-// SpectatorHandler todo
+// SpectatorHandler subscribes a "player" to a game without them having to be a player.
 func SpectatorHandler(client *firestore.Client, hub *h.Hub) utils.Handler {
 	return utils.WebSocketRequest(func(r *http.Request, c *websocket.Conn) {
 		paramMap, err := url.ParseQuery(r.URL.RawQuery)
 		if err != nil {
-			log.Println("Could not parse URL")
+			log.Println("SpectatorHandler: Could not parse URL", err)
 			return
 		}
 		gameID, err := utils.GetQueryValue(&paramMap, "gameID")
@@ -190,12 +154,12 @@ func SpectatorHandler(client *firestore.Client, hub *h.Hub) utils.Handler {
 	})
 }
 
-// PlayerHandler todo
+// PlayerHandler subscribes a player to a game.
 func PlayerHandler(client *firestore.Client, hub *h.Hub) utils.Handler {
 	return utils.WebSocketRequest(func(r *http.Request, c *websocket.Conn) {
 		paramMap, err := url.ParseQuery(r.URL.RawQuery)
 		if err != nil {
-			log.Println("Could not parse URL")
+			log.Println("Could not parse URL", err)
 			return
 		}
 		gameID, err := utils.GetQueryValue(&paramMap, "gameID")

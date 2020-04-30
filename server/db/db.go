@@ -18,7 +18,7 @@ type Card struct {
 	Guessed   bool   `firestore:"guessed"`
 }
 
-// Game represents a game.
+// Game represents a codenames game.
 type Game struct {
 	ID                       string            `firestore:"id"`
 	Status                   string            `firestore:"status"`
@@ -37,7 +37,7 @@ type Game struct {
 	LastCardGuessedCorrectly bool              `firestore:"lastCardGuessedCorrectly"`
 }
 
-// UpdateGame Updates a game
+// UpdateGame updates a game using a caller-provided mapOfUpdates.
 func UpdateGame(ctx context.Context, client *firestore.Client, gameID string, mapOfUpdates map[string]interface{}) error {
 	ref := client.Collection("games").Doc(gameID)
 	fieldsToUpdate := []firestore.Update{}
@@ -69,7 +69,7 @@ func CreateGame(ctx context.Context, client *firestore.Client, game *Game) error
 	return err
 }
 
-// AddPlayerToGame TODO: document
+// AddPlayerToGame Adds a player to a game if it still pending. It also attempts to set a role for the given player.
 func AddPlayerToGame(ctx context.Context, client *firestore.Client, gameID string, playerID string, playerName string) error {
 	ref := client.Collection("games").Doc(gameID)
 	err := client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
@@ -144,7 +144,7 @@ func AddPlayerToGame(ctx context.Context, client *firestore.Client, gameID strin
 	return err
 }
 
-// GetGame todo
+// GetGame Returns a Game struct.
 func GetGame(ctx context.Context, client *firestore.Client, gameID string) (*Game, error) {
 	doc, err := client.Collection("games").Doc(gameID).Get(ctx)
 	if err != nil {
