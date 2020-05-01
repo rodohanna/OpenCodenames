@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"time"
 
 	"cloud.google.com/go/firestore"
 	"github.com/RobertDHanna/OpenCodenames/config"
@@ -35,12 +36,15 @@ type Game struct {
 	LastCardGuessed          string            `firestore:"lastCardGuessed"`
 	LastCardGuessedBy        string            `firestore:"lastCardGuessedBy"`
 	LastCardGuessedCorrectly bool              `firestore:"lastCardGuessedCorrectly"`
+	UpdatedAt                int64             `firestore:"updatedAt"`
 }
 
 // UpdateGame updates a game using a caller-provided mapOfUpdates.
 func UpdateGame(ctx context.Context, client *firestore.Client, gameID string, mapOfUpdates map[string]interface{}) error {
 	ref := client.Collection("games").Doc(gameID)
 	fieldsToUpdate := []firestore.Update{}
+	now := time.Now()
+	mapOfUpdates["updatedAt"] = now.Unix()
 	for key, value := range mapOfUpdates {
 		fieldsToUpdate = append(fieldsToUpdate, firestore.Update{Path: key, Value: value})
 	}
@@ -61,6 +65,8 @@ func CreateGame(ctx context.Context, client *firestore.Client, game *Game) error
 		if err != nil && status.Code(err) != codes.NotFound {
 			return err
 		}
+		now := time.Now()
+		game.UpdatedAt = now.Unix()
 		return tx.Set(ref, game)
 	})
 	if err != nil {
@@ -136,6 +142,8 @@ func AddPlayerToGame(ctx context.Context, client *firestore.Client, gameID strin
 		}
 		game.Players[playerID] = playerName
 		fieldsToUpdate["players"] = game.Players
+		now := time.Now()
+		fieldsToUpdate["updatedAt"] = now.Unix()
 		return tx.Set(ref, fieldsToUpdate, firestore.MergeAll)
 	})
 	if err != nil {
