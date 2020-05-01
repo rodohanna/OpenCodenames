@@ -198,7 +198,7 @@ function Board({ game, sendMessage, appColor, setAppColor, toaster }: BoardProps
             return (
               <Grid.Column key={cardName} className="column-override">
                 <Segment
-                  className={gameIsRunning ? 'game-segment' : ''}
+                  className="game-segment"
                   textAlign="center"
                   style={{
                     userSelect: 'none',
@@ -207,7 +207,12 @@ function Board({ game, sendMessage, appColor, setAppColor, toaster }: BoardProps
                   color={cardData.BelongsTo === 'red' ? 'red' : cardData.BelongsTo === 'blue' ? 'blue' : undefined}
                   inverted={['red', 'blue', 'black'].includes(cardData.BelongsTo)}
                   onClick={() => {
-                    if ([TeamBlueGuesser, TeamRedGuesser].includes(You) && YourTurn) {
+                    if (
+                      [TeamBlueGuesser, TeamRedGuesser].includes(You) &&
+                      YourTurn &&
+                      loadingWord === null &&
+                      !cardData.Guessed
+                    ) {
                       sendMessage(`Guess ${cardName}`);
                       setLoadingWord(cardName);
                     }
