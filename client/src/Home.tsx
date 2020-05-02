@@ -103,7 +103,7 @@ function Home() {
                 <Form.Input
                   icon="add user"
                   iconPosition="left"
-                  label="Enter a name"
+                  label="Enter your name"
                   placeholder="Morgana"
                   value={joinGamePlayerName || ''}
                   onChange={(e) => {
@@ -145,7 +145,7 @@ function Home() {
                     <Form.Input
                       icon="add user"
                       iconPosition="left"
-                      label={<label style={{ textAlign: 'left' }}>Enter a name</label>}
+                      label={<label style={{ textAlign: 'left' }}>Enter your name</label>}
                       placeholder="Ryuji"
                       value={createGamePlayerName || ''}
                       onChange={(e) => {
