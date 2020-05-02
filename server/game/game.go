@@ -283,27 +283,26 @@ func HandlePlayerGuess(ctx context.Context, client *firestore.Client, action str
 				} else {
 					whoseTurn = "red"
 				}
-			} else {
-				redCardsGuessed := 0
-				blueCardsGuessed := 0
-				for _, card := range newCards {
-					if !card.Guessed {
-						continue
-					}
-					if card.BelongsTo == "blue" {
-						blueCardsGuessed++
-					} else if card.BelongsTo == "red" {
-						redCardsGuessed++
-					}
+			}
+			redCardsGuessed := 0
+			blueCardsGuessed := 0
+			for _, card := range newCards {
+				if !card.Guessed {
+					continue
 				}
-				if blueCardsGuessed == 9 {
-					whoseTurn = "over"
-					status = "bluewon"
+				if card.BelongsTo == "blue" {
+					blueCardsGuessed++
+				} else if card.BelongsTo == "red" {
+					redCardsGuessed++
 				}
-				if redCardsGuessed == 8 {
-					whoseTurn = "over"
-					status = "redwon"
-				}
+			}
+			if blueCardsGuessed == 9 {
+				whoseTurn = "over"
+				status = "bluewon"
+			}
+			if redCardsGuessed == 8 {
+				whoseTurn = "over"
+				status = "redwon"
 			}
 			db.UpdateGame(ctx, client, game.ID, map[string]interface{}{
 				"cards":                    newCards,
