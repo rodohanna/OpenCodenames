@@ -20,11 +20,6 @@ import (
 func CreateGameHandler(client *firestore.Client) utils.Handler {
 	return utils.PostRequest(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.Background()
-		id, err := utils.MakeEasyID(5)
-		if err != nil {
-			log.Println("Could not make an ID", err)
-			return
-		}
 		paramMap, err := url.ParseQuery(r.URL.RawQuery)
 		if err != nil {
 			log.Println("Could not parse URL", err)
@@ -59,7 +54,7 @@ func CreateGameHandler(client *firestore.Client) utils.Handler {
 			teamBlueSpy = playerName
 		}
 		game := db.Game{
-			ID:                       id,
+			ID:                       "",
 			Status:                   "pending",
 			Players:                  playerMap,
 			CreatorID:                creatorID,
@@ -75,10 +70,24 @@ func CreateGameHandler(client *firestore.Client) utils.Handler {
 			LastCardGuessedBy:        "",
 			LastCardGuessedCorrectly: false,
 		}
-		err = db.CreateGame(ctx, client, &game)
-		if err != nil {
-			fmt.Fprintf(w, "failed to create game %s %s!", r.Method, id)
-			return
+		id := ""
+		for {
+			id, err = utils.MakeEasyID(5)
+			if err != nil {
+				log.Println("Could not make an ID", err)
+				return
+			}
+			game.ID = id
+			err = db.CreateGame(ctx, client, &game)
+			if err != nil {
+				if err.Error() == "GameAlreadyExists" {
+					log.Println("GameAlreadyExists!", id)
+					continue
+				}
+				fmt.Fprintf(w, "failed to create game %s %s!", r.Method, id)
+				return
+			}
+			break
 		}
 		fmt.Fprintf(w, `{"id":"%s","playerID":"%s"}`, id, playerID)
 	})

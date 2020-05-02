@@ -70,6 +70,11 @@ function Lobby({ game, sendMessage }: LobbyProps) {
           <Header.Subheader>Waiting on players</Header.Subheader>
         </Header>
       </Container>
+      <Container textAlign="center">
+        <Header as="h3" inverted>
+          ID: {game.BaseGame.ID}
+        </Header>
+      </Container>
       <Container textAlign="center" text>
         <div>
           <Segment attached color="green">

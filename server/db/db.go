@@ -61,9 +61,12 @@ func UpdateGame(ctx context.Context, client *firestore.Client, gameID string, ma
 func CreateGame(ctx context.Context, client *firestore.Client, game *Game) error {
 	ref := client.Collection("games").Doc(game.ID)
 	err := client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
-		_, err := tx.Get(ref)
+		doc, err := tx.Get(ref)
 		if err != nil && status.Code(err) != codes.NotFound {
 			return err
+		}
+		if doc != nil && doc.Exists() {
+			return errors.New("GameAlreadyExists")
 		}
 		now := time.Now()
 		game.UpdatedAt = now.Unix()
