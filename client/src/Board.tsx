@@ -2,6 +2,7 @@ import React from 'react';
 import { Divider, Container, Grid, Segment, List, Icon, Message, Button, Loader } from 'semantic-ui-react';
 import { chunk } from 'lodash';
 import { AppColor, AppColorToCSSColor } from './config';
+import useLocalStorage from './hooks/useLocalStorage';
 
 type BoardProps = {
   game: Game;
@@ -135,12 +136,21 @@ function Board({ game, sendMessage, appColor, setAppColor, toaster }: BoardProps
       TeamBlueSpy,
     },
   } = game;
+  const [hasSeenTutorial, setHasSeenTutorialRerender, setHasSeenTutorialNoRerender] = useLocalStorage(
+    'has-seen-tutorial',
+    'false',
+  );
   const gameIsRunning = Status === 'running';
   const playerIsOnTeamRed = TeamRed.includes(You);
   const playerIsOnTeamBlue = TeamBlue.includes(You);
   const isPlayersTurn = (playerIsOnTeamRed && WhoseTurn === 'red') || (playerIsOnTeamBlue && WhoseTurn === 'blue');
   const [loadingWord, setLoadingWord] = React.useState<string | null>(null);
   const [endTurnLoading, setEndTurnLoading] = React.useState<boolean>(false);
+  React.useEffect(() => {
+    if (hasSeenTutorial === 'false') {
+      setHasSeenTutorialNoRerender('true');
+    }
+  }, [hasSeenTutorial, setHasSeenTutorialNoRerender]);
   if (endTurnLoading && !isPlayersTurn) {
     setEndTurnLoading(false);
   }
@@ -239,6 +249,27 @@ function Board({ game, sendMessage, appColor, setAppColor, toaster }: BoardProps
   return (
     <Container textAlign="center">
       <BannerMessage game={game} sendMessage={sendMessage} />
+      {hasSeenTutorial === 'false' && (
+        <Message onDismiss={() => setHasSeenTutorialRerender('true')} floating info size="large">
+          <Message.Header>How To Play</Message.Header>
+          <p>
+            After the Spy gives a clue the Guesser needs to <b>click on a card</b> in order to guess.
+            <br />
+            <br />
+            The card's color will be revealed and if the card was guessed correctly, the Guesser will have the option to{' '}
+            <b>continue guessing</b> or <b>end their turn</b>.
+            <br />
+            <br />
+            If the Guesser guesses incorrectly their turn will <b>automatically end</b>.
+            <br />
+            <br />
+            Remember, the Guesser must click on the <b>End Turn</b> button if they choose to stop guessing.
+            <br />
+            <br />
+            Have fun!
+          </p>
+        </Message>
+      )}
       <Segment padded>
         <Grid columns={2} textAlign="center">
           <Grid.Row>

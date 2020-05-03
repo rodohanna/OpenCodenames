@@ -1,5 +1,8 @@
 import React from 'react';
-export default function useLocalStorage(key: string, initialValue: string): [string | null, (value: string) => void] {
+export default function useLocalStorage(
+  key: string,
+  initialValue: string,
+): [string | null, (value: string) => void, (value: string) => void] {
   const [storedValue, setStoredValue] = React.useState(() => {
     try {
       const item = window.localStorage.getItem(key);
@@ -23,5 +26,13 @@ export default function useLocalStorage(key: string, initialValue: string): [str
     }
   };
 
-  return [storedValue, setValue];
+  const setValueNoRerender = (value: string) => {
+    try {
+      window.localStorage.setItem(key, value);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  return [storedValue, setValue, setValueNoRerender];
 }
