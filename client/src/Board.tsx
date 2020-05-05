@@ -36,7 +36,7 @@ function BannerMessage({ game, sendMessage }: BannerMessageProps) {
                 setRestartingGame(true);
                 sendMessage('RestartGame');
               }}
-              disabled={!game.YouOwnGame || restartingGame}
+              disabled={restartingGame}
               loading={restartingGame}
             >
               Restart game
@@ -66,6 +66,7 @@ function BannerMessage({ game, sendMessage }: BannerMessageProps) {
 function TeamDescription({
   icon,
   color,
+  cardsLeft,
   team,
   you,
   spy,
@@ -77,6 +78,7 @@ function TeamDescription({
 }: {
   icon: 'chess knight' | 'chess bishop';
   color: 'red' | 'blue';
+  cardsLeft: number;
   team: string[];
   you: string;
   spy: string;
@@ -87,9 +89,19 @@ function TeamDescription({
   sendMessage: (message: string) => void;
 }) {
   const youAreGuesser = you === guesser;
+  const cardsLeftText = cardsLeft !== 1 ? `cards left` : `card left`;
   return (
     <>
       <Icon name={icon} size="big" color={color} />
+      {
+        <Container style={{ marginTop: '5px' }}>
+          <span style={{ fontSize: '17px' }}>
+            <i>
+              <b>{cardsLeft}</b> {cardsLeftText}
+            </i>
+          </span>
+        </Container>
+      }
       <List verticalAlign="middle">
         {team.sort().map((player) => (
           <List.Item key={player}>
@@ -146,6 +158,17 @@ function Board({ game, sendMessage, appColor, setAppColor, toaster }: BoardProps
   const isPlayersTurn = (playerIsOnTeamRed && WhoseTurn === 'red') || (playerIsOnTeamBlue && WhoseTurn === 'blue');
   const [loadingWord, setLoadingWord] = React.useState<string | null>(null);
   const [endTurnLoading, setEndTurnLoading] = React.useState<boolean>(false);
+  const { blueCardsLeft, redCardsLeft } = Object.values(game.BaseGame.Cards).reduce(
+    (accum, card) => {
+      return {
+        ...accum,
+        ...(card.BelongsTo === 'blue' && card.Guessed && { blueCardsLeft: accum.blueCardsLeft - 1 }),
+        ...(card.BelongsTo === 'red' && card.Guessed && { redCardsLeft: accum.redCardsLeft - 1 }),
+      };
+    },
+    // TODO: These are magic numbers right now, I should make them configurable later
+    { blueCardsLeft: 9, redCardsLeft: 8 },
+  );
   React.useEffect(() => {
     if (hasSeenTutorial === 'false') {
       setHasSeenTutorialNoRerender('true');
@@ -280,6 +303,7 @@ function Board({ game, sendMessage, appColor, setAppColor, toaster }: BoardProps
               <TeamDescription
                 icon="chess knight"
                 color="red"
+                cardsLeft={redCardsLeft}
                 team={TeamRed}
                 you={You}
                 spy={TeamRedSpy}
@@ -294,6 +318,7 @@ function Board({ game, sendMessage, appColor, setAppColor, toaster }: BoardProps
               <TeamDescription
                 icon="chess bishop"
                 color="blue"
+                cardsLeft={blueCardsLeft}
                 team={TeamBlue}
                 you={You}
                 spy={TeamBlueSpy}

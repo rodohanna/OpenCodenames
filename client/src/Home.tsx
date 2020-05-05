@@ -23,6 +23,7 @@ function Home() {
   const history = useHistory();
   const [gameIDFieldRequiredError, setGameIDFieldRequiredError] = React.useState(false);
   const [joinGamePlayerNameFieldRequiredError, setJoinGamePlayerNameFieldRequiredError] = React.useState(false);
+  const [joinGameGameError, setJoinGameGameError] = React.useState<any>(false);
   const [createGamePlayerNameFieldRequiredError, setCreateGamePlayerNameFieldRequiredError] = React.useState(false);
   const [playingOnThisDevice, setPlayingOnThisDevice] = React.useState(true);
   const [joinGameID, setJoinGameID] = React.useState<string | null>(query.get('gameID'));
@@ -40,9 +41,20 @@ function Home() {
   const [joinGameLoading, joinGameError, joinGameResult] = useAPI({
     endpoint: `/game/join?gameID=${joinGameID}&playerName=${joinGamePlayerName}`,
     method: 'POST',
-    skip: !shouldJoinGame || joinGamePlayerName === null || joinGamePlayerName === '',
+    skip: !shouldJoinGame || joinGamePlayerName === null || joinGamePlayerName === '' || joinGameGameError,
     withReCAPTCHA: false,
   });
+  React.useEffect(() => {
+    if (joinGameResult?.error === 'GameDoesntExist') {
+      setJoinGameGameError('The game could not be found');
+    } else if (joinGameResult?.error === 'NameAlreadyTaken') {
+      setJoinGameGameError('Someone in the game already has that name');
+    } else if (joinGameResult?.error === 'GameIsFull') {
+      setJoinGameGameError('That game is already full (8 players)');
+    } else if (joinGameResult?.error === 'GameAlreadyStarted') {
+      setJoinGameGameError('That game has already started');
+    }
+  }, [joinGameResult]);
   if (createGameResult?.id) {
     history.push(
       `/game?gameID=${createGameResult?.id}${
@@ -98,7 +110,7 @@ function Home() {
                     }
                     setJoinGameID(e.target.value.replace(/\s/g, '').slice(0, 16).toLocaleUpperCase());
                   }}
-                  error={gameIDFieldRequiredError}
+                  error={gameIDFieldRequiredError || joinGameGameError}
                 />
                 <Form.Input
                   icon="add user"
@@ -130,9 +142,10 @@ function Home() {
                       return;
                     }
                     setShouldJoinGame(true);
+                    setJoinGameGameError(false);
                   }}
                 />
-                <Dimmer active={joinGameLoading}>
+                <Dimmer active={joinGameLoading && !joinGameGameError}>
                   <Loader size="large">Loading</Loader>
                 </Dimmer>
               </Form>

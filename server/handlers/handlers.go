@@ -118,7 +118,7 @@ func JoinGameHandler(client *firestore.Client) utils.Handler {
 		}
 		err = db.AddPlayerToGame(ctx, client, gameID, playerID, playerName)
 		if err != nil {
-			if err.Error() == "playerAlreadyAdded" {
+			if err.Error() == "PlayerAlreadyAdded" {
 				fmt.Fprintf(w, `{"success":true,"playerID":"%s"}`, playerID)
 				return
 			}

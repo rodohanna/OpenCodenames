@@ -13,9 +13,11 @@ export default function useAPI({ endpoint, method, skip, withReCAPTCHA = false }
   const [result, setResult] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(false);
   const [hasError, setHasError] = React.useState(false);
-  if (!skip && !loading) {
-    setLoading(true);
-  }
+  React.useEffect(() => {
+    if (!skip && !loading) {
+      setLoading(true);
+    }
+  }, [skip, loading]);
 
   React.useEffect(() => {
     if (!skip) {

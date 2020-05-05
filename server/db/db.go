@@ -83,8 +83,11 @@ func AddPlayerToGame(ctx context.Context, client *firestore.Client, gameID strin
 	ref := client.Collection("games").Doc(gameID)
 	err := client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
 		doc, err := tx.Get(ref)
-		if err != nil {
+		if err != nil && status.Code(err) != codes.NotFound {
 			return err
+		}
+		if doc != nil && !doc.Exists() {
+			return errors.New("GameDoesntExist")
 		}
 		var game Game
 		if err := doc.DataTo(&game); err != nil {
@@ -98,18 +101,18 @@ func AddPlayerToGame(ctx context.Context, client *firestore.Client, gameID strin
 					"players": game.Players,
 				}, firestore.MergeAll)
 			}
-			return errors.New("playerAlreadyAdded")
+			return errors.New("PlayerAlreadyAdded")
 		}
 		for _, otherPlayerName := range game.Players {
 			if playerName == otherPlayerName {
-				return errors.New("nameAlreadyTaken")
+				return errors.New("NameAlreadyTaken")
 			}
 		}
 		if len(game.Players) >= config.PlayerLimit() {
-			return errors.New("gameIsFull")
+			return errors.New("GameIsFull")
 		}
 		if game.Status != "pending" {
-			return errors.New("gameAlreadyStarted")
+			return errors.New("GameAlreadyStarted")
 		}
 		fieldsToUpdate := map[string]interface{}{}
 		if len(game.Players) == 0 {
