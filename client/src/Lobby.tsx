@@ -121,42 +121,49 @@ function Lobby({ game, sendMessage }: LobbyProps) {
       <Container textAlign="justified">
         <Divider />
         <Card.Group centered>
-          {game.BaseGame.Players.sort().map((playerName) => (
-            <Card color={game.BaseGame.TeamBlue.includes(playerName) ? 'blue' : 'red'} key={playerName}>
-              <Card.Content>
-                <Card.Description textAlign="center">
-                  <Header as="h2" icon>
-                    {playerName}
-                  </Header>
-                </Card.Description>
-                <Select
-                  options={playerRoleOptions}
-                  style={{ display: 'block' }}
-                  value={
-                    playerName === updateTeamPlayer?.[0]
-                      ? updateTeamPlayer?.[1]
-                      : game.BaseGame.TeamBlueSpy === playerName
-                      ? 'bluespy'
-                      : game.BaseGame.TeamBlueGuesser === playerName
-                      ? 'blueguesser'
-                      : game.BaseGame.TeamRedSpy === playerName
-                      ? 'redspy'
-                      : game.BaseGame.TeamRedGuesser === playerName
-                      ? 'redguesser'
-                      : game.BaseGame.TeamBlue.includes(playerName)
-                      ? 'blueobs'
-                      : 'redobs'
-                  }
-                  disabled={updateTeamPlayer !== null || !game.YouOwnGame}
-                  loading={playerName === updateTeamPlayer?.[0]}
-                  onChange={(_, data) => {
-                    setUpdateTeamPlayer([playerName, String(data.value)]);
-                    sendMessage(`UpdateTeam ${playerName} ${data.value}`);
-                  }}
-                />
-              </Card.Content>
-            </Card>
-          ))}
+          {game.BaseGame.Players.sort().map((playerName) => {
+            const playerOnTeamBlue = game.BaseGame.TeamBlue.includes(playerName);
+            return (
+              <Card color={playerOnTeamBlue ? 'blue' : 'red'} key={playerName}>
+                <Card.Content>
+                  <Card.Description textAlign="center">
+                    <Header as="h2" icon>
+                      <Icon
+                        name={playerOnTeamBlue ? 'chess bishop' : 'chess knight'}
+                        color={playerOnTeamBlue ? 'blue' : 'red'}
+                      />
+                      {playerName}
+                    </Header>
+                  </Card.Description>
+                  <Select
+                    options={playerRoleOptions}
+                    style={{ display: 'block' }}
+                    value={
+                      playerName === updateTeamPlayer?.[0]
+                        ? updateTeamPlayer?.[1]
+                        : game.BaseGame.TeamBlueSpy === playerName
+                        ? 'bluespy'
+                        : game.BaseGame.TeamBlueGuesser === playerName
+                        ? 'blueguesser'
+                        : game.BaseGame.TeamRedSpy === playerName
+                        ? 'redspy'
+                        : game.BaseGame.TeamRedGuesser === playerName
+                        ? 'redguesser'
+                        : game.BaseGame.TeamBlue.includes(playerName)
+                        ? 'blueobs'
+                        : 'redobs'
+                    }
+                    disabled={updateTeamPlayer !== null || !game.YouOwnGame}
+                    loading={playerName === updateTeamPlayer?.[0]}
+                    onChange={(_, data) => {
+                      setUpdateTeamPlayer([playerName, String(data.value)]);
+                      sendMessage(`UpdateTeam ${playerName} ${data.value}`);
+                    }}
+                  />
+                </Card.Content>
+              </Card>
+            );
+          })}
         </Card.Group>
       </Container>
     </>

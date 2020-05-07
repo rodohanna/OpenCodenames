@@ -37,6 +37,7 @@ type Game struct {
 	LastCardGuessedBy        string            `firestore:"lastCardGuessedBy"`
 	LastCardGuessedCorrectly bool              `firestore:"lastCardGuessedCorrectly"`
 	UpdatedAt                int64             `firestore:"updatedAt"`
+	TimesPlayed              int64             `firestore:"timesPlayed"`
 }
 
 // UpdateGame updates a game using a caller-provided mapOfUpdates.

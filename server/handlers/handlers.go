@@ -69,6 +69,7 @@ func CreateGameHandler(client *firestore.Client) utils.Handler {
 			LastCardGuessed:          "",
 			LastCardGuessedBy:        "",
 			LastCardGuessedCorrectly: false,
+			TimesPlayed:              0,
 		}
 		id := ""
 		for {

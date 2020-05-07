@@ -344,6 +344,7 @@ func HandleRestartGame(ctx context.Context, client *firestore.Client, game *db.G
 			"lastCardGuessed":          "",
 			"lastCardGuessedBy":        "",
 			"lastCardGuessedCorrectly": false,
+			"timesPlayed":              game.TimesPlayed + 1,
 		})
 	}
 }
