@@ -88,7 +88,7 @@ function Home() {
       <Container textAlign="center">
         <Header as="h2" icon inverted>
           <Icon name="gamepad" />
-          OpenCodenames
+          ChunkyNut
           <Header.Subheader>Play the board game Codenames online with friends.</Header.Subheader>
         </Header>
       </Container>
@@ -99,7 +99,7 @@ function Home() {
             <Grid.Column>
               <Form>
                 <Form.Input
-                  icon="add user"
+                  icon="puzzle"
                   iconPosition="left"
                   label="Enter a game ID"
                   placeholder="FRXX..."
