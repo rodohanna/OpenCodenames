@@ -125,6 +125,12 @@ func MapGameToGuesserGame(game *db.Game, playerID string) (*PlayerGame, error) {
 	if err != nil {
 		log.Println("MapGameToGuesserGame:MapGameToBaseGame failed", err)
 	}
+	if game.WhoseTurn == "over" {
+		// Add BelongsTo back in
+		for word, card := range game.Cards {
+			baseGame.Cards[word] = card
+		}
+	}
 	guesserGame := &PlayerGame{
 		You:          game.Players[playerID],
 		YouOwnGame:   game.CreatorID == playerID,

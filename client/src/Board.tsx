@@ -235,6 +235,7 @@ function Board({ game, sendMessage, appColor, setAppColor, toaster }: BoardProps
                   textAlign="center"
                   style={{
                     userSelect: 'none',
+                    border: '1px solid black',
                     ...((cardData.Guessed || !gameIsRunning) && { opacity: '.75' }),
                   }}
                   color={cardData.BelongsTo === 'red' ? 'red' : cardData.BelongsTo === 'blue' ? 'blue' : undefined}
