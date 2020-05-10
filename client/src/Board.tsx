@@ -30,17 +30,19 @@ function BannerMessage({ game, sendMessage }: BannerMessageProps) {
         {startNewGame && (
           <>
             <br />
-            <Button
-              color="green"
-              onClick={() => {
-                setRestartingGame(true);
-                sendMessage('RestartGame');
-              }}
-              disabled={restartingGame}
-              loading={restartingGame}
-            >
-              Restart game
-            </Button>
+            {You && (
+              <Button
+                color="green"
+                onClick={() => {
+                  setRestartingGame(true);
+                  sendMessage('RestartGame');
+                }}
+                disabled={restartingGame}
+                loading={restartingGame}
+              >
+                Restart game
+              </Button>
+            )}
           </>
         )}
       </Message>
